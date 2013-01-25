@@ -2,12 +2,17 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 REPO_DIR=/tmp/plumb_example.git
+if [ $1 ]; then
+    EXIT_CODE=$1
+else
+    EXIT_CODE=0
+fi
 
 rm -rf $REPO_DIR
 mkdir -p $REPO_DIR
 cd $REPO_DIR
 git init
-echo 'task :default { puts "Success!" }' > Rakefile
+echo "task(:default) { puts 'Exiting with code $EXIT_CODE'; exit $EXIT_CODE }" > Rakefile
 git add .
 git commit -m "Example Rakefile with default task"
 cd $SCRIPT_DIR

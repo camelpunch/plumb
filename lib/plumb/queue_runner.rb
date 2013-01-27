@@ -10,8 +10,7 @@ module Plumb
     def run
       message = @queue.pop
       if message
-        job = Job.new(message.attributes)
-        yield job
+        yield Job.new(message.attributes)
       else
         @callable_when_empty.call
       end

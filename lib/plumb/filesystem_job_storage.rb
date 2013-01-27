@@ -2,18 +2,15 @@ require_relative 'job'
 
 module Plumb
   class FileSystemJobStorage
+    include Enumerable
+
     def initialize(environment, storage_path)
       @environment = environment
       @storage_path = storage_path
     end
 
-    def to_a
-      JSON.parse(data).map {|attributes| Plumb::Job.new(attributes)}
-    end
-
-    def <<(job)
-      new_jobs = to_a
-      new_jobs << job
+    def <<(new_job)
+      new_jobs = updated_collection_for_job(new_job)
       File.open(@storage_path, 'w') do |file|
         file << new_jobs.to_json
       end
@@ -24,7 +21,15 @@ module Plumb
     rescue Errno::ENOENT
     end
 
+    def each
+      JSON.parse(data).each {|attributes| yield Plumb::Job.new(attributes)}
+    end
+
     private
+
+    def updated_collection_for_job(new_job)
+      reject {|job| job.name == new_job.name} + [new_job]
+    end
 
     def data
       unless File.exists?(@storage_path)

@@ -10,8 +10,12 @@ module Plumb
         storage1 = FileSystemJobStorage.new('test', path)
         storage2 = FileSystemJobStorage.new('test', path)
 
-        storage1 << job = Job.new(foo: 'bar')
+        job = Job.new(name: 'bar')
+        storage1 << job
+        storage1.find {|job| job.name == 'bar'}.must_equal job
         storage1.to_a.must_equal [job]
+
+        storage2.find {|job| job.name == 'bar'}.must_equal job
         storage2.to_a.must_equal [job]
       end
     end
@@ -27,6 +31,27 @@ module Plumb
         storage1.clear
         storage1.to_a.must_be :empty?
         storage2.to_a.must_be :empty?
+      end
+    end
+
+    it "can be mapped" do
+      with_nonexistent_file_path do |path|
+        storage = FileSystemJobStorage.new('test', path)
+        storage << Job.new(name: 'foo')
+        storage << Job.new(name: 'bar')
+
+        storage.map {|job| job.name}.must_equal %w(foo bar)
+      end
+    end
+
+    it "updates existing jobs" do
+      with_nonexistent_file_path do |path|
+        storage = FileSystemJobStorage.new('test', path)
+        storage << Job.new(name: 'foo')
+        storage << Job.new(name: 'foo', bob: 'fred')
+
+        storage.find {|job| job.name == 'foo'}.bob.must_equal('fred')
+        storage.count.must_equal 1
       end
     end
 

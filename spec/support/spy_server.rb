@@ -5,20 +5,18 @@ module SpecSupport
   class SpyServer
     class << self
       attr_accessor :queue
-
-      def start(port, path)
-        new(port, path).tap(&:start)
-      end
     end
 
-    def initialize(port, path)
+    def initialize(port)
       @port = port
-      @path = path
       SpyServer.queue = ::Queue.new
     end
 
-    def start
+    def record_put_requests_to(path)
       server.mount(@path, PutServlet)
+    end
+
+    def start
       Thread.new { server.start }.abort_on_exception = true
     end
 

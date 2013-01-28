@@ -6,7 +6,9 @@ require_relative '../../../lib/plumb/build_status'
 module Plumb
   describe WebReporter do
     it "sends build statuses to an endpoint" do
-      server = SpecSupport::SpyServer.start(8000, '/builds/14')
+      server = SpecSupport::SpyServer.new(8000)
+      server.record_put_requests_to '/builds/14'
+      server.start
       reporter = WebReporter.new("http://localhost:8000/builds")
       status = BuildStatus.new(build_id: 14,
                                status: 'success')

@@ -55,12 +55,13 @@ Enqueues everything into the waiting queue, in order.
 
 Waiting queue runner
 --------------------
-do I have builds to run before me?
-  no: move to immediate build queue
+get an item
+do I have builds to run before this item?
+  no: move item to immediate build queue
   yes:
-    have all of the builds to run before me passed?
-      yes: move to immediate build queue
-      no: leave in queue
+    have all of the builds to run before the current item passed?
+      yes: move item to immediate build queue
+      no: leave item in queue
 
 
 There is one immediate build queue (per architecture), anything in it should be

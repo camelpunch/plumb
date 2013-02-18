@@ -32,6 +32,8 @@ describe "web server" do
 
     project('unit-tests')['lastBuildStatus'].must_equal 'Success', project('unit-tests')
     project('unit-tests')['activity'].must_equal 'Sleeping'
+    project('unit-tests')['webUrl'].
+      must_equal "http://example.org/dashboard/cctray.xml"
   end
 
   it "shows a failed build in the feed" do
@@ -47,6 +49,8 @@ describe "web server" do
 
     project('My-Project')['lastBuildStatus'].must_equal 'Failure'
     project('My-Project')['activity'].must_equal 'Sleeping'
+    project('My-Project')['webUrl'].
+      must_equal "http://example.org/dashboard/cctray.xml"
   end
 
   it "shows a build in progress in the feed" do
@@ -62,6 +66,8 @@ describe "web server" do
 
     project('progress-project')['activity'].must_equal 'Building'
     project('progress-project')['lastBuildStatus'].must_be :empty?
+    project('progress-project')['webUrl'].
+      must_equal "http://example.org/dashboard/cctray.xml"
   end
 
   def delete_all_jobs

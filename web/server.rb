@@ -27,7 +27,8 @@ module Plumb
       log "GET to CCTray XML"
       content_type 'text/xml'
       erb :cctray, locals: {
-        projects: JOBS.map {|job| Plumb::CCTrayProject.new(job)}
+        projects: JOBS.map {|job| Plumb::CCTrayProject.new(job)},
+        web_url: request.url
       }
     end
 

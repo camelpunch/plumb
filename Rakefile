@@ -3,6 +3,8 @@ require 'rake/testtask'
 integration_pattern = 'spec/integration/*_spec.rb'
 acceptance_pattern = 'spec/end-end/*_spec.rb'
 
+ENV['PLUMB_AWS_CONFIG'] = "#{ENV['HOME']}/plumb_aws.yml"
+
 Rake::TestTask.new(:units) do |task|
   task.test_files = FileList.new('spec/**/*_spec.rb').
     exclude(integration_pattern, acceptance_pattern)

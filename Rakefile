@@ -9,11 +9,11 @@ Rake::TestTask.new(:units) do |task|
 end
 
 Rake::TestTask.new(:integration) do |task|
-  task.test_files = FileList.new(integration_pattern)
+  task.pattern = integration_pattern
 end
 
 Rake::TestTask.new(:acceptance) do |task|
-  task.test_files = FileList.new(acceptance_pattern)
+  task.pattern = acceptance_pattern
 end
 
 task default: :units

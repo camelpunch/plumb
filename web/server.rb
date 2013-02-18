@@ -7,7 +7,6 @@ require_relative '../lib/plumb/views/cctray_project'
 
 module Plumb
   class Server < Sinatra::Base
-    FEED_PATH = File.expand_path('../cc.xml', __FILE__)
     DATABASE_NAME = "db-#{ENV['RACK_ENV'] || 'production'}.json"
     JOBS = Plumb::FileSystemJobStorage.new(
       File.expand_path("../#{DATABASE_NAME}", __FILE__)

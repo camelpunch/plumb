@@ -24,10 +24,6 @@ module Plumb
     def to_json(*)
       JSON.generate(@table)
     end
-
-    def job
-      Job.new(super)
-    end
   end
 end
 

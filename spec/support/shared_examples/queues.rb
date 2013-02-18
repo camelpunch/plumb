@@ -31,6 +31,12 @@ module SpecSupport
       end
     end
 
+    it "reports its name" do
+      name = generate_name
+      queue = queue_named(name)
+      queue.name.must_equal name
+    end
+
     it "pops nil when everything has been popped" do
       @queues << queue = queue_named(generate_name)
       queue << item('[]')

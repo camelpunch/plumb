@@ -15,36 +15,53 @@ describe "web server" do
     feed.css("Projects>Project").must_be_empty
   end
 
+  it "uses the XML content type for the feed" do
+    get '/dashboard/cctray.xml'
+    last_response.content_type.must_include 'text/xml'
+  end
+
   it "shows a successful build in the feed" do
     delete_all_jobs
 
-    put '/builds/1', Plumb::BuildStatus.new(
-      build_id: 1,
-      job: Plumb::Job.new(id: 'job1', name: 'AceProject'),
-      status: 'success'
-    ).to_json
-
+    put '/jobs/unit-tests', Plumb::Job.new(name: 'unit-tests').to_json
+    post '/jobs/unit-tests/builds', Plumb::BuildStatus.new(status: 'success').to_json
     get '/dashboard/cctray.xml'
 
-    assert project('AceProject'),
+    assert project('unit-tests'),
       "The stored Job did not appear as a Project in the feed:\n\n#{feed.to_s}"
-    project('AceProject')['lastBuildStatus'].must_equal 'Success'
+
+    project('unit-tests')['lastBuildStatus'].must_equal 'Success', project('unit-tests')
+    project('unit-tests')['activity'].must_equal 'Sleeping'
   end
 
   it "shows a failed build in the feed" do
     delete_all_jobs
 
-    put '/builds/3', Plumb::BuildStatus.new(
-      build_id: 1,
-      job: Plumb::Job.new(id: 'job3', name: 'My Project'),
-      status: 'failure'
-    ).to_json
+    put '/jobs/My-Project', Plumb::Job.new(name: 'My-Project').to_json
+    post '/jobs/My-Project/builds', Plumb::BuildStatus.new(status: 'failure').to_json
 
     get '/dashboard/cctray.xml'
 
-    assert project('My Project'),
+    assert project('My-Project'),
       "The stored Job did not appear as a Project in the feed:\n\n#{feed.to_s}"
-    project('My Project')['lastBuildStatus'].must_equal 'Failure'
+
+    project('My-Project')['lastBuildStatus'].must_equal 'Failure'
+    project('My-Project')['activity'].must_equal 'Sleeping'
+  end
+
+  it "shows a build in progress in the feed" do
+    delete_all_jobs
+
+    put '/jobs/progress-project', Plumb::Job.new(name: 'progress-project').to_json
+    post '/jobs/progress-project/builds', Plumb::BuildStatus.new(status: 'building').to_json
+
+    get '/dashboard/cctray.xml'
+
+    assert project('progress-project'),
+      "The stored Job did not appear as a Project in the feed:\n\n#{feed.to_s}"
+
+    project('progress-project')['activity'].must_equal 'Building'
+    project('progress-project')['lastBuildStatus'].must_be :empty?
   end
 
   def delete_all_jobs

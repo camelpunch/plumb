@@ -6,11 +6,18 @@ module SpecSupport
   class WebApplicationDriver
     class Server
       include HTTParty
-      base_uri 'localhost:4567'
+      def self.port
+        6789
+      end
+      base_uri "localhost:#{port}"
+    end
+
+    def initialize(chatty)
+      @chatty = chatty
     end
 
     def start
-      @pid = Process.spawn("web/server.rb",
+      @pid = Process.spawn("rackup -E test -I web -r server -p #{Server.port} web/config.ru",
                            :out => '/dev/null',
                            :err => '/dev/null')
       probe_until('server up') { server_is_up? }
@@ -30,7 +37,9 @@ module SpecSupport
     end
 
     def shows_green_build_xml_for(project_name)
-      probe_until('green build available in feed') { project(project_name) }
+      probe_until("sleeping build for #{project_name} available in feed") {
+        project(project_name)['activity'] == 'Sleeping'
+      }
       project(project_name)['activity'].must_equal 'Sleeping',
         feed
       project(project_name)['lastBuildStatus'].must_equal 'Success',
@@ -43,19 +52,22 @@ module SpecSupport
       project(project_name)['lastBuildStatus'].must_equal 'Failure'
     end
 
+    def shows_build_in_progress_xml_for(project_name)
+      probe_until('build in progress available in feed') { project(project_name) }
+      project(project_name)['activity'].must_equal 'Building'
+    end
+
     private
 
     def server_is_up?
       Server.get("/dashboard/cctray.xml")
       true
-    rescue Errno::ECONNREFUSED
-      false
-    rescue Errno::ECONNRESET
+    rescue SystemCallError
       false
     end
 
     def project(name)
-      feed.css("Projects>Project[name='#{name}']").first
+      feed.css("Projects>Project[name='#{name}']").first or raise cant_find_name(name)
     end
 
     def feed
@@ -63,24 +75,60 @@ module SpecSupport
       Nokogiri::XML(response.body)
     end
 
+    def humanize_value(value)
+      value || "[#{value.class}]"
+    end
+
     def probe_until(description, &block)
-      #puts "----- Probe until #{description}"
+      log "----- Probe until #{description}"
       tries = 0
       value = nil
 
-      until (value = yield) || tries == 10 do
-        #puts "-- Got value: #{value}"
+      value_truthy = -> {
+        begin
+          block.call
+        rescue Exception => e
+          err "----- Exception: #{e.message}"
+          false
+        end
+      }
+
+      until value_truthy.call || tries == 10 do
+        log "----- Got value: #{humanize_value(value)}"
         tries += 1
         sleep 0.5
       end
 
       message =
-        "-- Probing until '#{description}' reached its limit\n\n" +
-        "-- Last value: #{value}\n\n"
+        "-- Probe '#{description}' reached its limit\n\n" +
+        "-- Last value: #{humanize_value(value)}\n\n"
 
       if tries == 10
-        $stderr.puts message
+        err message
+      else
+        log "-- #{description}!"
       end
+    end
+
+    def cant_find_name(name)
+      if sinatra_error
+        StandardError.new("Corrupted feed. Did you restart the server?\n\n" +
+                          "#{sinatra_error[0]}")
+      else
+        StandardError.new("Can't find '#{name}' in #{feed}")
+      end
+    end
+
+    def sinatra_error
+      @sinatra_error ||= feed.text.match(/^        [A-Za-z]+ at \/dashboard.*BACKTRACE/m)
+    end
+
+    def log(text)
+      puts text if @chatty
+    end
+
+    def err(text)
+      $stderr.puts text if @chatty
     end
   end
 end

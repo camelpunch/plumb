@@ -4,8 +4,7 @@ module Plumb
   class FileSystemJobStorage
     include Enumerable
 
-    def initialize(environment, storage_path)
-      @environment = environment
+    def initialize(storage_path)
       @storage_path = storage_path
     end
 
@@ -16,19 +15,23 @@ module Plumb
       end
     end
 
+    def update(name, &block)
+      self << block.call(find {|job| job.name == name})
+    end
+
     def clear
       File.unlink @storage_path
     rescue Errno::ENOENT
     end
 
-    def each
-      JSON.parse(data).each {|attributes| yield Plumb::Job.new(attributes)}
+    def each(&block)
+      JSON.parse(data).each {|attributes| block.call Plumb::Job.new(attributes)}
     end
 
     private
 
     def updated_collection_for_job(new_job)
-      reject {|job| job.name == new_job.name} + [new_job]
+      reject {|job| job == new_job} + [new_job]
     end
 
     def data

@@ -1,24 +1,50 @@
 require 'minitest/autorun'
-require_relative '../../support/spy_server'
 require_relative '../../../lib/plumb/web_reporter'
-require_relative '../../../lib/plumb/build_status'
+require_relative '../../../lib/plumb/job'
+
+require 'webmock/minitest'
+WebMock.allow_net_connect!
 
 module Plumb
   describe WebReporter do
-    it "sends build statuses to an endpoint" do
-      server = SpecSupport::SpyServer.new(8000)
-      server.record_put_requests_to '/builds/14'
-      server.start
-      reporter = WebReporter.new("http://localhost:8000/builds")
-      status = BuildStatus.new(build_id: 14,
-                               status: 'success')
+    before do WebMock.disable_net_connect! end
+    after do WebMock.allow_net_connect! end
 
-      reporter.build_completed(status)
+    let(:host) { "http://some.place:8000" }
+    let(:mock_handler) {
+      handler = MiniTest::Mock.new
+      def handler.handle_200(*); end
+      handler
+    }
+    let(:job) { Job.new(name: 'a-job') }
+    let(:reporter) { WebReporter.new(host) }
 
-      server.last_request.must_equal ['PUT', status.to_json]
+    it "sends a building status to the endpoint, ensuring job exists" do
+      stub_request(:put, %r{^#{host}/.*})
+      stub_request(:post, %r{^#{host}/.*})
+      reporter.build_started(job)
+
+      assert_requested(:put, 'http://some.place:8000/jobs/a-job',
+                       body: job.to_json)
+      assert_requested(:post, 'http://some.place:8000/jobs/a-job/builds',
+                       body: BuildStatus.new(status: 'building').to_json)
     end
 
-    it "echoes to stderr when the web server is unavailable"
+    it "sends successful build statuses to the endpoint" do
+      stub_request(:post, %r{^#{host}/.*})
+      reporter.build_succeeded(job)
+
+      assert_requested(:post, 'http://some.place:8000/jobs/a-job/builds',
+                       body: BuildStatus.new(status: 'success').to_json)
+    end
+
+    it "sends failed build statuses to the endpoint" do
+      stub_request(:post, %r{^#{host}/.*})
+      reporter.build_failed(job)
+
+      assert_requested(:post, 'http://some.place:8000/jobs/a-job/builds',
+                       body: BuildStatus.new(status: 'failure').to_json)
+    end
   end
 end
 

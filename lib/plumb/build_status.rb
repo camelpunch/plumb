@@ -3,16 +3,30 @@ require 'ostruct'
 
 module Plumb
   class BuildStatus < OpenStruct
-    def failure?
-      status == :failure
+    class << self
+      def parse(json)
+        new JSON.parse(json)
+      end
     end
 
     def success?
-      status == :success
+      status.to_sym == :success
     end
 
-    def to_json
+    def failure?
+      status.to_sym == :failure
+    end
+
+    def status
+      super || :sleeping
+    end
+
+    def to_json(*)
       JSON.generate(@table)
+    end
+
+    def job
+      Job.new(super)
     end
   end
 end

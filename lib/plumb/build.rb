@@ -8,27 +8,22 @@ module Plumb
       @reporter = reporter
     end
 
-    def id; 1; end
-
     def run
       @repo.fetch @job.repository_url, self
     end
 
     def process_working_copy(dir)
-      status = system("cd #{dir.path} && #{@job.script}") ? :success : :failure
-      @reporter.build_completed(
-        BuildStatus.new(build_id: id,
-                        job: @job,
-                        status: status)
-      )
+      @reporter.build_started(@job)
+
+      if system("cd #{dir.path} && #{@job.script}")
+        @reporter.build_succeeded(@job)
+      else
+        @reporter.build_failed(@job)
+      end
     end
 
     def handle_clone_failure
-      @reporter.build_completed(
-        BuildStatus.new(build_id: id,
-                        job: @job,
-                        status: :failure)
-      )
+      @reporter.build_failed(@job)
     end
   end
 end

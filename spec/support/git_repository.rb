@@ -17,14 +17,18 @@ module SpecSupport
       exec "echo 'task(:default) {}' > Rakefile"
       exec "git add ."
       exec "git commit -m'Good Commit'"
-      exec "git rev-parse HEAD"
     end
 
     def create_bad_commit
-      exec "echo 'bad rakefile contents' > Rakefile"
+      exec "echo 'task(:default) { exit 1 }' > Rakefile"
       exec "git add ."
       exec "git commit -m'Bad Commit'"
-      exec "git rev-parse HEAD"
+    end
+
+    def create_commit_with_long_running_default_rake_task
+      exec "echo 'task(:default) { sleep 10 }' > Rakefile"
+      exec "git add ."
+      exec "git commit -m'Long-running task commit'"
     end
 
     def url
@@ -40,7 +44,7 @@ module SpecSupport
       filenames_in_repo = paths_in_repo.map &File.public_method(:basename)
     end
 
-    private 
+    private
 
     def exec(cmd)
       `cd #{@path}; #{cmd}`.strip

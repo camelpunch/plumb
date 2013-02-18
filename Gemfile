@@ -14,5 +14,6 @@ group :test do
   gem 'pry-doc'
   gem 'pry-debugger'
   gem 'minitest'
+  gem 'minitest-reporters'
   gem 'gmail'
 end

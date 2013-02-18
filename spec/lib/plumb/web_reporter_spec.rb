@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../../spec_helper'
 require_relative '../../../lib/plumb/web_reporter'
 require_relative '../../../lib/plumb/job'
 

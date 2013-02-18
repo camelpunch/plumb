@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../../spec_helper'
 require 'tempfile'
 require 'tmpdir'
 require_relative '../../../lib/plumb/build'

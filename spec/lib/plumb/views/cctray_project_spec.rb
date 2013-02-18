@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../../../spec_helper'
 require_relative '../../../../lib/plumb/build_status'
 require_relative '../../../../lib/plumb/views/cctray_project'
 require_relative '../../../../lib/plumb/job'

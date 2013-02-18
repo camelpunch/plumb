@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../spec_helper'
 require 'json'
 require 'rack/test'
 require 'nokogiri'

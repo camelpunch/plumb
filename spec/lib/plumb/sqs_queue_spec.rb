@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../../spec_helper'
 require 'yaml'
 require_relative '../../support/shared_examples/queues.rb'
 require_relative '../../../lib/plumb/sqs_queue'

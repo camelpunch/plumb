@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../../spec_helper'
 require 'tmpdir'
 require 'pathname'
 require_relative '../../../lib/plumb/filesystem_job_storage'

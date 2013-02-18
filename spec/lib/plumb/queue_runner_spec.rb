@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../../spec_helper'
 require 'thread'
 require_relative '../../../lib/plumb/queue_runner'
 require_relative '../../../lib/plumb/sqs_queue'

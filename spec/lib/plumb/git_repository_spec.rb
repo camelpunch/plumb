@@ -1,4 +1,4 @@
-require 'minitest/autorun'
+require_relative '../../spec_helper'
 require 'tmpdir'
 require_relative '../../../lib/plumb/git_repository'
 require_relative '../../support/git_repository'

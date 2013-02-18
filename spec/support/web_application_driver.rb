@@ -40,16 +40,14 @@ module SpecSupport
       probe_until("sleeping build for #{project_name} available in feed") {
         project(project_name)['activity'] == 'Sleeping'
       }
-      project(project_name)['activity'].must_equal 'Sleeping',
-        feed
-      project(project_name)['lastBuildStatus'].must_equal 'Success',
-        feed
+      project(project_name)['lastBuildStatus'].must_equal 'Success', feed
     end
 
     def shows_red_build_xml_for(project_name)
-      probe_until('red build available in feed') { project(project_name) }
-      project(project_name)['activity'].must_equal 'Sleeping'
-      project(project_name)['lastBuildStatus'].must_equal 'Failure'
+      probe_until("sleeping build for #{project_name} available in feed") {
+        project(project_name)['activity'] == 'Sleeping'
+      }
+      project(project_name)['lastBuildStatus'].must_equal 'Failure', feed
     end
 
     def shows_build_in_progress_xml_for(project_name)

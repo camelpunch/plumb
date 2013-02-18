@@ -18,7 +18,7 @@ Rake::TestTask.new(:acceptance) do |task|
   task.pattern = acceptance_pattern
 end
 
-task default: :units
+task default: [:units, :acceptance]
 
 desc "Run all tests"
 task all: [:units, :integration, :acceptance]

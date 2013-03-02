@@ -14,7 +14,7 @@ module Plumb
 
     def log(text)
       File.open(File.expand_path('../web.log', __FILE__), 'a') do |file|
-        file.puts "#{Time.now.strftime("%Y-%m-%d %H:%M:%S")} #{text}"
+        file.puts "PORT #{request.port} :: #{Time.now.strftime("%Y-%m-%d %H:%M:%S")} #{text}"
       end
     end
 

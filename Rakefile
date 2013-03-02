@@ -15,6 +15,7 @@ Rake::TestTask.new(:integration) do |task|
 end
 
 Rake::TestTask.new(:acceptance) do |task|
+  ENV['N'] = '3' # number of tests to run in parallel
   task.pattern = acceptance_pattern
 end
 

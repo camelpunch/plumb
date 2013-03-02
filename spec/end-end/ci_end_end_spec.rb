@@ -6,12 +6,15 @@ require_relative '../support'
 require_relative '../../lib/plumb'
 
 describe "CI end-end" do
+  self.parallelize_me!
+
+  let(:uuid) { SecureRandom.uuid }
   let(:queue_config_path) {
-    File.expand_path('../../support/queue_config.json', __FILE__)
+    File.expand_path("../../support/queue_config-#{uuid}.json", __FILE__)
   }
   let(:queue_config) { JSON.parse(File.read(queue_config_path)) }
   let(:queue_driver) { Plumb::ResqueQueue }
-  let(:web_app) { SpecSupport::WebApplicationDriver.new(chatty = false) }
+  let(:web_app) { SpecSupport::WebApplicationDriver.new }
   let(:pipeline_processor) {
     SpecSupport::PipelineProcessorDriver.new(queue_config_path)
   }
@@ -27,7 +30,6 @@ describe "CI end-end" do
       queue_config_path
     )
   }
-  let(:queue_suffix) { SecureRandom.uuid }
   let(:repository) { SpecSupport::GitRepository.new }
   let(:queue_runners) { [waiting_queue_runner, immediate_queue_runner] }
 
@@ -49,7 +51,7 @@ describe "CI end-end" do
     repository.create_good_commit
     queue_runners.each(&:start)
 
-    pipeline_processor.run_pipeline(
+    pipeline_processor.run(
       order: [
         [
           {
@@ -70,7 +72,7 @@ describe "CI end-end" do
     repository.create
     repository.create_bad_commit
     queue_runners.each(&:start)
-    pipeline_processor.run_pipeline(
+    pipeline_processor.run(
       order: [
         [
           {
@@ -90,7 +92,7 @@ describe "CI end-end" do
     repository.create
     repository.create_commit_with_long_running_default_rake_task
     queue_runners.each(&:start)
-    pipeline_processor.run_pipeline(
+    pipeline_processor.run(
       order: [
         [
           {
@@ -115,9 +117,9 @@ describe "CI end-end" do
     File.open(queue_config_path, 'w') do |file|
       file << JSON.generate(
         driver: queue_driver.name.split('::').last,
-        immediate_queue: "pipeline-immediate-queue-#{queue_suffix}",
-        waiting_queue: "pipeline-waiting-queue-#{queue_suffix}",
-        build_status_endpoint: "http://localhost:#{SpecSupport::WebApplicationDriver::Server.port}"
+        immediate_queue: "pipeline-immediate-queue-#{uuid}",
+        waiting_queue: "pipeline-waiting-queue-#{uuid}",
+        build_status_endpoint: "http://localhost:#{web_app.port}"
       )
     end
   end

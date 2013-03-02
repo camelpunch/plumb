@@ -9,7 +9,7 @@ module SpecSupport
       @config_path = config_path
     end
 
-    def run_pipeline(pipeline)
+    def run(pipeline)
       cmd = "echo '#{JSON.generate(pipeline)}' | #{cmd_path} #{config_path}"
       system cmd or raise "command failed"
     end

@@ -4,20 +4,26 @@ require_relative '../../web/server'
 
 module SpecSupport
   class WebApplicationDriver
-    class Server
-      include HTTParty
-      def self.port
-        6789
-      end
-      base_uri "localhost:#{port}"
+    def self.next_available_environment
+      @current_env ||= 0
+      @current_env += 1
+      "test#{@current_env}"
     end
 
-    def initialize(chatty)
-      @chatty = chatty
+    def self.next_available_port
+      @current_port ||= 3000 # don't use common Rails port
+      @current_port += 1
+      @current_port
+    end
+
+    def initialize(logger = NullLogger.new)
+      @logger = logger
+      @server = Class.new { include HTTParty }
+      @server.base_uri "localhost:#{port}"
     end
 
     def start
-      @pid = Process.spawn("rackup -E test -I web -r server -p #{Server.port} web/config.ru",
+      @pid = Process.spawn("rackup -E #{environment} -I web -r server -p #{port} web/config.ru",
                            :out => '/dev/null',
                            :err => '/dev/null')
       probe_until('server up') { server_is_up? }
@@ -32,8 +38,12 @@ module SpecSupport
     end
 
     def with_no_data
-      Server.delete("/jobs/all")
+      @server.delete("/jobs/all")
       self
+    end
+
+    def port
+      @port ||= WebApplicationDriver.next_available_port
     end
 
     def shows_green_build_xml_for(project_name)
@@ -57,8 +67,12 @@ module SpecSupport
 
     private
 
+    def environment
+      @environment ||= WebApplicationDriver.next_available_environment
+    end
+
     def server_is_up?
-      Server.get("/dashboard/cctray.xml")
+      @server.get("/dashboard/cctray.xml")
       true
     rescue SystemCallError
       false
@@ -69,7 +83,7 @@ module SpecSupport
     end
 
     def feed
-      response = Server.get("/dashboard/cctray.xml")
+      response = @server.get("/dashboard/cctray.xml")
       Nokogiri::XML(response.body)
     end
 
@@ -110,8 +124,7 @@ module SpecSupport
 
     def cant_find_name(name)
       if sinatra_error
-        StandardError.new("Corrupted feed. Did you restart the server?\n\n" +
-                          "#{sinatra_error[0]}")
+        StandardError.new("Corrupted feed.\n\n" + "#{sinatra_error[0]}")
       else
         StandardError.new("Can't find '#{name}' in #{feed}")
       end
@@ -122,11 +135,21 @@ module SpecSupport
     end
 
     def log(text)
-      puts text if @chatty
+      @logger.log text
     end
 
     def err(text)
-      $stderr.puts text if @chatty
+      @logger.err text
     end
+  end
+
+  class NullLogger
+    def log(text); end
+    def err(text); end
+  end
+
+  class Logger
+    def log(text); puts text; end
+    def err(text); $stderr.puts text; end
   end
 end

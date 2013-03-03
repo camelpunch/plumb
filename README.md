@@ -31,6 +31,8 @@ That's as far as this project has got right now.
 
 ## Design
 
+This is a sketch pad for the future direction of the project.
+
 ### Kick off
 
 User creates pipeline JSON config file, like:

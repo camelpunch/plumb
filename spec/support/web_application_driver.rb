@@ -42,6 +42,10 @@ module SpecSupport
       self
     end
 
+    def url
+      "http://localhost:#{port}"
+    end
+
     def port
       @port ||= WebApplicationDriver.next_available_port
     end

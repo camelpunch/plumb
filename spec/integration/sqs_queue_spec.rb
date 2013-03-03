@@ -9,7 +9,7 @@ module Plumb
       SqsQueue.new(
         name,
         YAML.load_file(
-          if File.exists?(ENV['PLUMB_AWS_CONFIG'])
+          if File.exists?(ENV['PLUMB_AWS_CONFIG'].to_s)
             ENV['PLUMB_AWS_CONFIG']
           else
             File.expand_path('../../../config/aws.yml', __FILE__)

@@ -38,7 +38,7 @@ describe "CI end-end" do
     web_app.start.with_no_data
 
     repository.create
-    repository.create_good_commit
+    repository.create_commit('units', 'exit 0')
     queue_runners.each(&:start)
 
     pipeline_processor.run(
@@ -47,7 +47,7 @@ describe "CI end-end" do
           {
             name: 'unit-tests',
             repository_url: repository.url,
-            script: 'rake'
+            script: 'rake long_run'
           }
         ]
       ]
@@ -60,7 +60,7 @@ describe "CI end-end" do
     web_app.start.with_no_data
 
     repository.create
-    repository.create_bad_commit
+    repository.create_commit('integration', 'exit 1')
     queue_runners.each(&:start)
     pipeline_processor.run(
       order: [
@@ -68,7 +68,7 @@ describe "CI end-end" do
           {
             name: 'unit-tests',
             repository_url: repository.url,
-            script: 'rake'
+            script: 'rake units'
           }
         ]
       ]
@@ -80,7 +80,7 @@ describe "CI end-end" do
     web_app.start.with_no_data
 
     repository.create
-    repository.create_commit_with_long_running_default_rake_task
+    repository.create_commit('long_run', 'sleep 10')
     queue_runners.each(&:start)
     pipeline_processor.run(
       order: [
@@ -88,7 +88,7 @@ describe "CI end-end" do
           {
             name: 'unit-tests',
             repository_url: repository.url,
-            script: 'rake'
+            script: 'rake integration'
           }
         ]
       ]

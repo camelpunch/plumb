@@ -13,10 +13,13 @@ module SpecSupport
       FileUtils.remove_entry_secure(@path) if @path
     end
 
-    def create_commit(task, script)
-      exec "echo 'task(:#{task}) { #{script} }' > Rakefile"
+    def create_commit(tasks)
+      exec "> Rakefile"
+      tasks.each do |task, script|
+        exec "echo 'task(:#{task}) { #{script} }' >> Rakefile"
+      end
       exec "git add ."
-      exec "git commit -m'#{task} #{script}'"
+      exec "git commit -m'tasks'"
     end
 
     def url

@@ -36,32 +36,10 @@ describe "CI end-end" do
 
   it "shows a single green build in the feed" do
     web_app.start.with_no_data
-
     repository.create
-    repository.create_commit('units', 'exit 0')
+    repository.create_commit(units: 'exit 0')
     queue_runners.each(&:start)
 
-    pipeline_processor.run(
-      order: [
-        [
-          {
-            name: 'unit-tests',
-            repository_url: repository.url,
-            script: 'rake long_run'
-          }
-        ]
-      ]
-    )
-
-    web_app.shows_green_build_xml_for('unit-tests')
-  end
-
-  it "shows a single red build in the feed" do
-    web_app.start.with_no_data
-
-    repository.create
-    repository.create_commit('integration', 'exit 1')
-    queue_runners.each(&:start)
     pipeline_processor.run(
       order: [
         [
@@ -73,14 +51,14 @@ describe "CI end-end" do
         ]
       ]
     )
-    web_app.shows_red_build_xml_for('unit-tests')
+
+    web_app.shows_green_build_xml_for('unit-tests')
   end
 
-  it "shows builds in progress in the feed" do
+  it "shows a single red build in the feed" do
     web_app.start.with_no_data
-
     repository.create
-    repository.create_commit('long_run', 'sleep 10')
+    repository.create_commit(integration: 'exit 1')
     queue_runners.each(&:start)
     pipeline_processor.run(
       order: [
@@ -89,6 +67,25 @@ describe "CI end-end" do
             name: 'unit-tests',
             repository_url: repository.url,
             script: 'rake integration'
+          }
+        ]
+      ]
+    )
+    web_app.shows_red_build_xml_for('unit-tests')
+  end
+
+  it "shows builds in progress in the feed" do
+    web_app.start.with_no_data
+    repository.create
+    repository.create_commit(long_run: 'sleep 10')
+    queue_runners.each(&:start)
+    pipeline_processor.run(
+      order: [
+        [
+          {
+            name: 'unit-tests',
+            repository_url: repository.url,
+            script: 'rake long_run'
           }
         ]
       ]

@@ -2,6 +2,11 @@
 
 This project is in its early stages of experimentation and doesn't do much yet.
 
+## About Resque queueing
+
+Even though there's a Resque driver for Plumb, it doesn't require you to use a
+standard Resque worker, since Plumb integrates its own queue runners.
+
 ## Running the tests
 
 `rake -T` shows all the available options. `rake` on its own runs just the unit and acceptance tests. Integration tests (tests that hit services) are excluded, as they're least likely to change and take a long time.

@@ -14,7 +14,7 @@ module Plumb
 
     it "clones the repo and passes the working dir to its listener" do
       fixture_repo.create
-      fixture_repo.create_good_commit
+      fixture_repo.create_commit(units: 'exit 0')
 
       Dir.mktmpdir do |projects_dir|
         repo = GitRepository.new(projects_dir)
@@ -52,7 +52,7 @@ module Plumb
     describe "when the destination already exists" do
       it "removes the directory and starts from scratch" do
         fixture_repo.create
-        fixture_repo.create_good_commit
+        fixture_repo.create_commit(units: 'exit 0')
 
         Dir.mktmpdir do |projects_dir|
           project_dir = "#{projects_dir}/#{fixture_repo.project_name}"

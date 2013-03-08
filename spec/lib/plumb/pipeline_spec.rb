@@ -3,30 +3,45 @@ require_relative '../../../lib/plumb/pipeline'
 
 module Plumb
   describe Pipeline do
-    it "is equivalent to another pipeline with the same name" do
-      Pipeline.new(name: 'foo').must_equal(
-        Pipeline.new(name: 'foo', order: [])
+    let(:parent) { Object.new }
+    let(:aunty) { Object.new }
+    let(:child) { Object.new }
+
+    it "creates jobs on the server" do
+      job_repository = MiniTest::Mock.new
+      pipeline = Pipeline.new(
+        job_repository: job_repository,
+        waiting_queue: ::Queue.new,
+        order: [
+          [parent, aunty],
+          [child]
+        ]
       )
+      job_repository.expect(:create, true, [parent])
+      job_repository.expect(:create, true, [aunty])
+      job_repository.expect(:create, true, [child])
+      pipeline.run
+      job_repository.verify
     end
 
-    it "is not equivalent to another pipeline with different name" do
-      Pipeline.new(name: 'bar').wont_equal(
-        Pipeline.new(name: 'foo')
-      )
-    end
-
-    it "enqueues the first job into the waiting queue" do
-      job1 = Object.new
-      job2 = Object.new
+    it "enqueues everything into the waiting queue, in order" do
+      null_repo = Object.new
+      def null_repo.create(*); end
 
       waiting_queue = ::Queue.new
       pipeline = Pipeline.new(
         waiting_queue: waiting_queue,
-        order: [[job1], [job2]]
+        job_repository: null_repo,
+        order: [
+          [parent, aunty],
+          [child]
+        ]
       )
       pipeline.run
-      waiting_queue.size.must_equal 1
-      waiting_queue.pop.must_equal job1
+      waiting_queue.size.must_equal 3
+      waiting_queue.pop.must_equal parent
+      waiting_queue.pop.must_equal aunty
+      waiting_queue.pop.must_equal child
     end
   end
 end

@@ -30,6 +30,16 @@ module Plumb
       Job.new.activity.must_equal 'sleeping'
     end
 
+    it "has a ready? reader" do
+      Job.new(ready: false).wont_be :ready?
+      Job.new(ready: nil).wont_be :ready?
+      Job.new(ready: true).must_be :ready?
+    end
+
+    it "uses its name when converting to param" do
+      Job.new(name: "foo-id").to_param.must_equal "foo-id"
+    end
+
     it "is building when explicitly set" do
       Job.new(activity: 'building').activity.must_equal 'building'
     end

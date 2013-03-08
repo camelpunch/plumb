@@ -17,6 +17,10 @@ module Plumb
       JSON.generate(@table)
     end
 
+    def to_param
+      name
+    end
+
     def with_build_status(build_status)
       Job.new(@table.merge(
         if build_status.success?
@@ -27,6 +31,10 @@ module Plumb
           {activity: build_status.status}
         end
       ))
+    end
+
+    def ready?
+      ready
     end
 
     def activity

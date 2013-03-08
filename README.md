@@ -91,7 +91,8 @@ the repositories.
 
 ### Pipeline
 
-Enqueues everything into the waiting queue, in order.
+Enqueues everything into the waiting queue, in order. Creates jobs by sending
+each to server.
 
 ### Waiting queue runner
 

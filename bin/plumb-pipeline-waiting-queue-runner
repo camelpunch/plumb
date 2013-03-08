@@ -1,26 +1,37 @@
 #!/usr/bin/env ruby
 
 require_relative '../lib/plumb'
-require_relative '../lib/plumb/queue_runner'
+require_relative '../lib/plumb/queued_jobs'
+require_relative '../lib/plumb/clerk'
+require_relative '../lib/plumb/waiting_slot'
+require_relative '../lib/plumb/immediate_slot'
+require_relative '../lib/plumb/null_slot'
+require_relative '../lib/plumb/web_reporter'
+require_relative '../lib/plumb/http_job_repository'
 
 module Plumb
   module WaitingQueueRunner
     class << self
       def call
         config = JSON.parse(File.read(ARGV[0]))
-        driver = Plumb.queue_driver(config)
+        queue_driver = Plumb.queue_driver(config)
 
-        waiting = driver.new(config.fetch('waiting_queue'))
-        immediate = driver.new(config.fetch('immediate_queue'))
-        runner = QueueRunner.new(
-          waiting,
-          ->{ sleep 1 }
+        # might not construct for SQS
+        waiting = queue_driver.new(config.fetch('waiting_queue'))
+        immediate = queue_driver.new(config.fetch('immediate_queue'))
+
+        clerk = Clerk.new(
+          QueuedJobs.new(
+            waiting, ->{ sleep 1 },
+            HttpJobRepository.new(config.fetch('build_status_endpoint'))
+          ),
+          WaitingSlot.new(waiting),
+          ImmediateSlot.new(immediate),
+          NullSlot.new
         )
 
         loop do
-          runner.run do |job|
-            immediate << job
-          end
+          clerk.deliver_next_item
         end
       end
     end

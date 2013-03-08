@@ -12,16 +12,6 @@ module Plumb
       File.expand_path("../#{DATABASE_NAME}", __FILE__)
     )
 
-    def log(text)
-      File.open(File.expand_path('../web.log', __FILE__), 'a') do |file|
-        file.puts "PORT #{request.port} :: #{Time.now.strftime("%Y-%m-%d %H:%M:%S")} #{text}"
-      end
-    end
-
-    def jobs_are_now
-      "Jobs are now: #{JOBS.to_a}"
-    end
-
     get '/dashboard/cctray.xml' do
       log "GET to CCTray XML"
       content_type 'text/xml'
@@ -29,6 +19,14 @@ module Plumb
         projects: JOBS.map {|job| Plumb::CCTrayProject.new(job)},
         web_url: request.url
       }
+    end
+
+    get "/jobs/:job_name" do
+      log "GET #{params[:job_name]}"
+      content_type 'application/json'
+      job = JOBS.find {|job| job.name == params[:job_name]}.to_json
+      log "found for #{params[:job_name]}: #{job}"
+      job
     end
 
     put "/jobs/:job_name" do
@@ -53,6 +51,16 @@ module Plumb
       end
       log jobs_are_now
       '{}'
+    end
+
+    def log(text)
+      File.open(File.expand_path('../web.log', __FILE__), 'a') do |file|
+        file.puts "PORT #{request.port} :: #{Time.now.strftime("%Y-%m-%d %H:%M:%S")} #{text}"
+      end
+    end
+
+    def jobs_are_now
+      "Jobs are now: #{JOBS.to_a}"
     end
 
     run! if app_file == $0

@@ -5,7 +5,7 @@ module Plumb
     end
 
     def [](key)
-      JSON.parse(self)[key]
+      attributes[key]
     end
 
     def attributes

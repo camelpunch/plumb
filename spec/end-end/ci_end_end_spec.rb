@@ -12,7 +12,7 @@ describe "CI end-end" do
   let(:queue_driver) { Plumb::ResqueQueue }
   let(:web_app) { SpecSupport::WebApplicationDriver.new }
   let(:pipeline_processor) { SpecSupport::PipelineProcessorDriver.new(queue_config.path) }
-  let(:repository) { SpecSupport::GitRepository.new }
+  let(:repo) { SpecSupport::GitRepository.new }
   let(:queue_names) { [:immediate_queue, :waiting_queue] }
   let(:queue_runners) {
     [
@@ -26,7 +26,7 @@ describe "CI end-end" do
   end
 
   after do
-    repository.destroy
+    repo.destroy
     web_app.stop
     queue_runners.each(&:stop)
     queue_names.each do |name|
@@ -34,10 +34,42 @@ describe "CI end-end" do
     end
   end
 
-  it "shows a single green build in the feed" do
+  it "executes parallel builds but cancels children if a parent build fails" do
     web_app.start.with_no_data
-    repository.create
-    repository.create_commit(units: 'exit 0')
+    repo.create
+
+    child_side_effect_file = Tempfile.new('child side effect')
+    aunty_side_effect_file = Tempfile.new('aunty side effect')
+    repo.create_commit(
+      parent: 'exit 1',
+      aunty: %Q( `echo 'foo' > "#{aunty_side_effect_file.path}"` ),
+      child: %Q( `echo 'foo' > "#{child_side_effect_file.path}"` )
+    )
+
+    queue_runners.each(&:start)
+
+    pipeline_processor.run(
+      order: [
+        [
+          { name: 'parent', script: 'rake parent', repository_url: repo.url },
+          { name: 'aunty', script: 'rake aunty', repository_url: repo.url },
+        ],
+        [ { name: 'child', script: 'rake child', repository_url: repo.url } ]
+      ]
+    )
+
+    web_app.shows_red_build_xml_for('parent')
+    web_app.shows_green_build_xml_for('aunty')
+    web_app.shows_green_build_xml_for('child')
+    File.read(child_side_effect_file).must_be :empty?
+    File.read(aunty_side_effect_file).must_equal 'foo'
+  end
+
+  it "shows a single green build in the feed" do
+    skip
+    web_app.start.with_no_data
+    repo.create
+    repo.create_commit(units: 'exit 0')
     queue_runners.each(&:start)
 
     pipeline_processor.run(
@@ -45,7 +77,7 @@ describe "CI end-end" do
         [
           {
             name: 'unit-tests',
-            repository_url: repository.url,
+            repository_url: repo.url,
             script: 'rake units'
           }
         ]
@@ -55,36 +87,18 @@ describe "CI end-end" do
     web_app.shows_green_build_xml_for('unit-tests')
   end
 
-  it "shows a single red build in the feed" do
-    web_app.start.with_no_data
-    repository.create
-    repository.create_commit(integration: 'exit 1')
-    queue_runners.each(&:start)
-    pipeline_processor.run(
-      order: [
-        [
-          {
-            name: 'unit-tests',
-            repository_url: repository.url,
-            script: 'rake integration'
-          }
-        ]
-      ]
-    )
-    web_app.shows_red_build_xml_for('unit-tests')
-  end
-
   it "shows builds in progress in the feed" do
+    skip
     web_app.start.with_no_data
-    repository.create
-    repository.create_commit(long_run: 'sleep 10')
+    repo.create
+    repo.create_commit(long_run: 'sleep 10')
     queue_runners.each(&:start)
     pipeline_processor.run(
       order: [
         [
           {
             name: 'unit-tests',
-            repository_url: repository.url,
+            repository_url: repo.url,
             script: 'rake long_run'
           }
         ]

@@ -2,16 +2,39 @@
 
 require 'json'
 require_relative '../lib/plumb/pipeline'
+require_relative '../lib/plumb/http_job_repository'
 
 module Plumb
   module PipelineProcessor
-    def self.call
-      config = JSON.parse(File.read(ARGV[0]))
+    class << self
+      def call
+        config = JSON.parse(File.read(ARGV[0]))
+        options = JSON.parse($stdin.read)
 
-      Pipeline.parse(
-        JSON.parse($stdin.read),
-        config
-      ).run
+        Pipeline.new(
+          order: job_order(options['order']),
+          waiting_queue: waiting_queue(config),
+          job_repository: HttpJobRepository.new(config.fetch('build_status_endpoint'))
+        ).run
+      end
+
+      def waiting_queue(config)
+        Plumb.queue_driver(config).new(
+          config.fetch('waiting_queue')
+        )
+      end
+
+      def job_order(order)
+        order.map {|step|
+          step.map {|job_data|
+            Job.new(
+              name: job_data['name'],
+              repository_url: job_data['repository_url'],
+              script: job_data['script'],
+            )
+          }
+        }
+      end
     end
   end
 end

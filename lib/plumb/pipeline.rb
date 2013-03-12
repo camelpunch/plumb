@@ -10,9 +10,6 @@ module Plumb
             waiting_queue: waiting_queue(queue_config),
             job_repository: HttpJobRepository.new(config.fetch('build_status_endpoint')))
       end
-
-      private
-
     end
 
     def initialize(options)

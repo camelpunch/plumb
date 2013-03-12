@@ -6,8 +6,6 @@ require_relative '../support'
 require_relative '../../lib/plumb'
 
 describe "CI end-end" do
-  self.parallelize_me!
-
   let(:queue_config) { SpecSupport::QueueConfig.new(queue_driver, web_app.url) }
   let(:queue_driver) { Plumb::ResqueQueue }
   let(:web_app) { SpecSupport::WebApplicationDriver.new }
@@ -42,8 +40,8 @@ describe "CI end-end" do
     aunty_side_effect_file = Tempfile.new('aunty side effect')
     repo.create_commit(
       parent: 'exit 1',
-      aunty: %Q( `echo 'foo' > "#{aunty_side_effect_file.path}"` ),
-      child: %Q( `echo 'foo' > "#{child_side_effect_file.path}"` )
+      aunty: %Q( `echo 'aunty side effect' > "#{aunty_side_effect_file.path}"` ),
+      child: %Q( `echo 'child side effect' > "#{child_side_effect_file.path}"` )
     )
 
     queue_runners.each(&:start)
@@ -58,15 +56,14 @@ describe "CI end-end" do
       ]
     )
 
+    File.read(child_side_effect_file).must_be :empty?
+    File.read(aunty_side_effect_file).must_equal 'aunty side effect'
     web_app.shows_red_build_xml_for('parent')
     web_app.shows_green_build_xml_for('aunty')
     web_app.shows_green_build_xml_for('child')
-    File.read(child_side_effect_file).must_be :empty?
-    File.read(aunty_side_effect_file).must_equal 'foo'
   end
 
   it "shows a single green build in the feed" do
-    skip
     web_app.start.with_no_data
     repo.create
     repo.create_commit(units: 'exit 0')

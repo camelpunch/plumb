@@ -7,10 +7,10 @@ class SpecSupport::QueueConfig
   def write
     File.open(path, 'w') do |file|
       file << JSON.generate(
-        driver: @driver.name.split('::').last,
+        driver: driver.name.split('::').last,
         immediate_queue: "pipeline-immediate-queue-#{uuid}",
         waiting_queue: "pipeline-waiting-queue-#{uuid}",
-        build_status_endpoint: @url
+        build_status_endpoint: url
       )
     end
   end
@@ -24,6 +24,8 @@ class SpecSupport::QueueConfig
   end
 
   private
+
+  attr_reader :url, :driver
 
   def contents
     @contents ||= JSON.parse(File.read(path))

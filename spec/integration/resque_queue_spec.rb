@@ -4,8 +4,8 @@ require_relative '../../lib/plumb/resque_queue'
 
 module Plumb
   class ResqueQueueSpec < SpecSupport::QueueSpec
-    def queue_named(name)
-      ResqueQueue.new(name)
+    def queue_named(name, listener = Plumb::NullQueueListener.new)
+      ResqueQueue.new(name, listener)
     end
   end
 end

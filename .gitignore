@@ -3,3 +3,4 @@ config/aws.yml
 tags
 web/db*.json
 web/*.log
+log/*.log

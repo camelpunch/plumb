@@ -60,6 +60,31 @@ module SpecSupport
       queue2.pop.must_equal obj.to_json
     end
 
+    it "informs its listener when enqueuing" do
+      listener = MiniTest::Mock.new
+      def listener.popped(*); end
+
+      @queues << queue = queue_named(generate_name, listener)
+      obj = item('{"baz":"qux"}')
+
+      listener.expect(:enqueued, nil, [obj])
+      queue << obj
+      listener.verify
+    end
+
+    it "informs its listener when popping" do
+      raw_json = '{"baz":"qux"}'
+      listener = MiniTest::Mock.new
+      def listener.enqueued(*); end
+
+      @queues << queue = queue_named(generate_name, listener)
+      queue << item(raw_json)
+
+      listener.expect(:popped, nil, [raw_json])
+      queue.pop
+      listener.verify
+    end
+
     it "doesn't share queue items across instances with different names" do
       @queues << queue1 = queue_named(generate_name)
       @queues << queue2 = queue_named(generate_name)

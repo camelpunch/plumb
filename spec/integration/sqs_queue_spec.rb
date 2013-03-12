@@ -5,7 +5,7 @@ require_relative '../../lib/plumb/sqs_queue'
 
 module Plumb
   class SqsQueueSpec < SpecSupport::QueueSpec
-    def queue_named(name)
+    def queue_named(name, listener = Plumb::NullQueueListener.new)
       SqsQueue.new(
         name,
         YAML.load_file(
@@ -14,7 +14,8 @@ module Plumb
           else
             File.expand_path('../../../config/aws.yml', __FILE__)
           end
-        )
+        ),
+        listener
       )
     end
   end

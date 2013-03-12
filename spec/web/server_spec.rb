@@ -9,6 +9,13 @@ require_relative '../../web/server'
 describe "web server" do
   include Rack::Test::Methods
 
+  describe "creating a job" do
+    it "returns 200 on success" do
+      put('/jobs/unit-tests', Plumb::Job.new(name: 'unit-tests').to_json)
+      last_response.status.must_equal 200
+    end
+  end
+
   describe "getting an individual job" do
     it "is in JSON format" do
       get('/jobs/unit-tests')

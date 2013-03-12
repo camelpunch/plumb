@@ -24,9 +24,30 @@ module Plumb
       job_repository.verify
     end
 
+    it "skips jobs that fail to create (for now)" do
+      stub_repo = Object.new
+      non_existent_jobs = aunty, child
+      stub_repo.define_singleton_method :create do |job|
+        non_existent_jobs.include?(job)
+      end
+
+      waiting_queue = ::Queue.new
+      pipeline = Pipeline.new(
+        job_repository: stub_repo,
+        waiting_queue: waiting_queue,
+        order: [
+          [parent, aunty],
+          [child]
+        ]
+      )
+      pipeline.run
+
+      waiting_queue.size.must_equal 3
+    end
+
     it "enqueues everything into the waiting queue, in order" do
       null_repo = Object.new
-      def null_repo.create(*); end
+      def null_repo.create(*); true; end
 
       waiting_queue = ::Queue.new
       pipeline = Pipeline.new(

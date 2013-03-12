@@ -16,16 +16,18 @@ module SpecSupport
       @current_port
     end
 
-    def initialize(logger = NullLogger.new)
+    def initialize(logger = Logger.new)
       @logger = logger
       @server = Class.new { include HTTParty }
       @server.base_uri "localhost:#{port}"
     end
 
     def start
-      @pid = Process.spawn("rackup -E #{environment} -I web -r server -p #{port} web/config.ru",
-                           :out => '/dev/null',
-                           :err => '/dev/null')
+      @pid = Process.spawn(
+        "rackup -E #{environment} -I web -r server -p #{port} web/config.ru",
+        :out => '/dev/null',
+        :err => '/dev/null'
+      )
       probe_until('server up') { server_is_up? }
       self
     end

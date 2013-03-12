@@ -12,9 +12,11 @@ module SpecSupport
     end
 
     def start
-      @pid = Process.spawn("#{@cmd_path} #{@config_path}",
-                           :out => $stdout,
-                           :err => $stdout)
+      @pid = Process.spawn(
+        "#{@cmd_path} #{@config_path}",
+        :out => $stdout,
+        :err => $stdout
+      )
     end
 
     def stop

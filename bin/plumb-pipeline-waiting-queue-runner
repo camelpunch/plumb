@@ -8,6 +8,7 @@ require_relative '../lib/plumb/immediate_slot'
 require_relative '../lib/plumb/null_slot'
 require_relative '../lib/plumb/web_reporter'
 require_relative '../lib/plumb/http_job_repository'
+require_relative '../lib/plumb/queue_logger'
 
 module Plumb
   module WaitingQueueRunner
@@ -16,8 +17,13 @@ module Plumb
         config = JSON.parse(File.read(ARGV[0]))
         queue_driver = Plumb.queue_driver(config)
 
-        # might not construct for SQS
-        waiting = queue_driver.new(config.fetch('waiting_queue'))
+        # FIXME might not construct successfully for SQS
+        waiting_logger_path =
+          File.expand_path('../../log/waiting_queue.log', __FILE__)
+        waiting = queue_driver.new(
+          config.fetch('waiting_queue'),
+          QueueLogger.new(waiting_logger_path)
+        )
         immediate = queue_driver.new(config.fetch('immediate_queue'))
 
         clerk = Clerk.new(

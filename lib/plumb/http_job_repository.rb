@@ -13,6 +13,10 @@ module Plumb
       )
     end
 
+    def create(job)
+      server.put("/jobs/#{job.to_param}", body: job.to_json).code == 200
+    end
+
     private
 
     attr_reader :url

@@ -6,5 +6,5 @@
   "waiting_queue": "plumb-waiting-queue",
 
   // where the web server is
-  "build_status_endpoint": "http://localhost:4567/"
+  "build_status_endpoint": "http://localhost:3000/"
 }

@@ -8,26 +8,23 @@ module Plumb
       end
     end
 
-    def initialize(queue, callable_when_empty = ->*{},
+    def initialize(queue,
+                   after_pop = ->{},
                    job_repository = NullJobRepository.new)
       @queue = queue
       @job_repository = job_repository
-      @callable_when_empty = callable_when_empty
+      @after_pop = after_pop
     end
 
     def pop(&block)
       job = job_from_message(queue.pop)
-
-      if job
-        block.call(job_repository.refresh(job))
-      else
-        callable_when_empty.call
-      end
+      block.call(job_repository.refresh(job)) if job
+      after_pop.call
     end
 
     private
 
-    attr_reader :queue, :job_repository, :callable_when_empty
+    attr_reader :queue, :job_repository, :after_pop
 
     def job_from_message(message)
       return nil unless message

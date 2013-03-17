@@ -5,8 +5,6 @@ require_relative '../../../lib/plumb/message'
 
 module Plumb
   describe QueuedJobs do
-    let(:unused_callable) { nil }
-
     describe "when a job repository is passed" do
       it "refreshes queued jobs before passing to the given block" do
         queue = ::Queue.new
@@ -17,7 +15,7 @@ module Plumb
           Job.new(name: "Greetings", ready: true) if job.name == "Greetings"
         end
 
-        runner = QueuedJobs.new(queue, unused_callable, job_repository)
+        runner = QueuedJobs.new(queue, ->{}, job_repository)
 
         job_passed = nil
         runner.pop do |job|
@@ -46,7 +44,17 @@ module Plumb
       end
     end
 
-    it "calls the callable if nothing was found" do
+    it "calls the callable if job is found" do
+      runner = QueuedJobs.new(
+        queue = OpenStruct.new(pop: Job.new),
+        callable = MiniTest::Mock.new
+      )
+      callable.expect(:call, nil, [])
+      runner.pop {}
+      callable.verify
+    end
+
+    it "calls the callable if no job is found" do
       runner = QueuedJobs.new(
         queue = OpenStruct.new(pop: nil),
         callable = MiniTest::Mock.new

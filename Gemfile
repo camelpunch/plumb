@@ -4,6 +4,8 @@ gem 'rake'
 gem 'sinatra'
 gem 'foreman'
 gem 'active_support'
+gem 'sequel'
+gem 'sqlite3'
 
 group :test do
   gem 'aws-sdk'

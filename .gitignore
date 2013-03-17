@@ -2,5 +2,6 @@ spec/support/queue_config*.json
 config/aws.yml
 tags
 web/db*.json
+web/*.db
 web/*.log
 log/*.log

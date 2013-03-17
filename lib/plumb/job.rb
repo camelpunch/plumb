@@ -13,6 +13,10 @@ module Plumb
       name == other.name
     end
 
+    def to_h
+      @table
+    end
+
     def to_json(*)
       JSON.generate(@table)
     end

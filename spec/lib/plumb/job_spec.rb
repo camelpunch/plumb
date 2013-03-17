@@ -9,6 +9,18 @@ module Plumb
       job.name.must_equal 'some-job'
     end
 
+    it "has a hash representation" do
+      Job.new(
+        name: 'run tests',
+        script: 'rake',
+        repository_url: '/some/place'
+      ).to_h.must_equal(
+        name: 'run tests',
+        script: 'rake',
+        repository_url: '/some/place'
+      )
+    end
+
     it "has a JSON representation" do
       Job.new(
         name: 'run tests',

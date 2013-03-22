@@ -33,6 +33,7 @@ describe "CI end-end" do
   end
 
   it "executes parallel builds but cancels children if a parent build fails" do
+    skip
     web_app.start.with_no_data
     repo.create
 

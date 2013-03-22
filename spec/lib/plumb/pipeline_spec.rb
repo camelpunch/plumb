@@ -1,13 +1,14 @@
 require_relative '../../spec_helper'
 require_relative '../../../lib/plumb/pipeline'
+require_relative '../../../lib/plumb/job'
 
 module Plumb
   describe Pipeline do
-    let(:parent) { Object.new }
-    let(:aunty) { Object.new }
-    let(:child) { Object.new }
+    let(:parent) { Job.new name: "Parent" }
+    let(:aunty) { Job.new name: "Aunty" }
+    let(:child) { Job.new name: "Child" }
 
-    it "creates jobs on the server" do
+    it "creates jobs on the server, encoding their dependencies" do
       job_repository = MiniTest::Mock.new
       pipeline = Pipeline.new(
         job_repository: job_repository,

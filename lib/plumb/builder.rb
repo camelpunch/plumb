@@ -1,7 +1,7 @@
 require_relative 'build_status'
 
 module Plumb
-  class Build
+  class Builder
     def initialize(job, repo, reporter)
       @repo = repo
       @job = job
@@ -9,22 +9,26 @@ module Plumb
     end
 
     def run
-      @repo.fetch @job.repository_url, self
+      repo.fetch job.repository_url, self
     end
 
     def process_working_copy(dir)
-      @reporter.build_started(@job)
+      promise = reporter.build_started(job)
 
-      if system("cd #{dir.path} && #{@job.script}")
-        @reporter.build_succeeded(@job)
+      if system("cd #{dir.path} && #{job.script}")
+        promise.fulfil
       else
-        @reporter.build_failed(@job)
+        promise.break
       end
     end
 
     def handle_clone_failure
-      @reporter.build_failed(@job)
+      reporter.build_failed(job)
     end
+
+    private
+
+    attr_reader :job, :repo, :reporter
   end
 end
 

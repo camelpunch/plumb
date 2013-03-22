@@ -1,22 +1,24 @@
 #!/usr/bin/env ruby
 require 'sinatra/base'
+require 'sequel'
 require_relative '../lib/plumb/build_status'
 require_relative '../lib/plumb/job'
-require_relative '../lib/plumb/filesystem_job_storage'
+require_relative '../lib/plumb/filesystem_storage'
 require_relative '../lib/plumb/views/cctray_project'
+
+DB = Sequel.sqlite
+require_relative 'models/job'
+require_relative 'models/build'
 
 module Plumb
   class Server < Sinatra::Base
-    DATABASE_NAME = "db-#{ENV['RACK_ENV'] || 'production'}.json"
-    JOBS = Plumb::FileSystemJobStorage.new(
-      File.expand_path("../#{DATABASE_NAME}", __FILE__)
-    )
-
     get '/dashboard/cctray.xml' do
       log "GET to CCTray XML"
       content_type 'text/xml'
+      puts "Grabbing all #{Storage::Job.count} jobs"
+      puts "Last Job: #{Storage::Job.last.to_json}"
       erb :cctray, locals: {
-        projects: JOBS.map {|job| Plumb::CCTrayProject.new(job)},
+        projects: Storage::Job.all.map {|job| Plumb::CCTrayProject.new(job)},
         web_url: request.url
       }
     end
@@ -24,32 +26,34 @@ module Plumb
     get "/jobs/:job_name" do
       log "GET #{params[:job_name]}"
       content_type 'application/json'
-      job = JOBS.find {|job| job.name == params[:job_name]}.to_json
-      log "found for #{params[:job_name]}: #{job}"
-      job
+      job = Storage::Job.first(name: params[:job_name])
+      raise Sinatra::NotFound unless job
+      job.to_json
     end
 
     put "/jobs/:job_name" do
       log "Storing job #{params}"
-      JOBS << Plumb::Job.parse(request.body.read)
-      log jobs_are_now
+      attributes = Plumb::Job.parse(request.body.read).to_h
+      job = Storage::Job.new(attributes)
+      job.save
       '{}'
     end
 
     delete "/jobs/all" do
       log "Deleting all jobs"
-      JOBS.clear
-      log jobs_are_now
+      Storage::Job.all.each(&:delete)
       '{}'
     end
 
     post "/jobs/:job_name/builds" do
       log "Storing build #{params}"
-      build_status = Plumb::BuildStatus.parse(request.body.read)
-      JOBS.update(params[:job_name]) do |job|
-        job.with_build_status(build_status)
-      end
-      log jobs_are_now
+      job = Storage::Job.first(name: params[:job_name])
+      raise Sinatra::NotFound unless job
+      status = Plumb::BuildStatus.parse(request.body.read)
+      job.build_started(status)
+      puts "Count on POST: #{Storage::Job.count}"
+      puts "Last Job on POST: #{Storage::Job.last.to_json}"
+      puts "Last build on POST: #{Storage::Build.last.status}"
       '{}'
     end
 
@@ -57,10 +61,6 @@ module Plumb
       File.open(File.expand_path('../web.log', __FILE__), 'a') do |file|
         file.puts "PORT #{request.port} :: #{Time.now.strftime("%Y-%m-%d %H:%M:%S")} #{text}"
       end
-    end
-
-    def jobs_are_now
-      "Jobs are now: #{JOBS.to_a}"
     end
 
     run! if app_file == $0

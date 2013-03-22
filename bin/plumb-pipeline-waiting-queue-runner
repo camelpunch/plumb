@@ -1,44 +1,50 @@
 #!/usr/bin/env ruby
 
 require_relative '../lib/plumb'
+require_relative '../lib/plumb/factories/queue_factory'
 require_relative '../lib/plumb/queued_jobs'
 require_relative '../lib/plumb/clerk'
 require_relative '../lib/plumb/waiting_slot'
 require_relative '../lib/plumb/immediate_slot'
 require_relative '../lib/plumb/null_slot'
 require_relative '../lib/plumb/web_reporter'
-require_relative '../lib/plumb/http_job_repository'
-require_relative '../lib/plumb/queue_logger'
 
 module Plumb
   module WaitingQueueRunner
     class << self
       def call
-        config = JSON.parse(File.read(ARGV[0]))
-        queue_driver = Plumb.queue_driver(config)
-
-        # FIXME might not construct successfully for SQS
-        waiting_logger_path =
-          File.expand_path('../../log/waiting_queue.log', __FILE__)
-        waiting = queue_driver.new(
-          config.fetch('waiting_queue'),
-          QueueLogger.new(waiting_logger_path)
-        )
-        immediate = queue_driver.new(config.fetch('immediate_queue'))
-
-        clerk = Clerk.new(
-          QueuedJobs.new(
-            waiting, ->{ sleep 1 },
-            HttpJobRepository.new(config.fetch('build_status_endpoint'))
-          ),
-          WaitingSlot.new(waiting),
-          ImmediateSlot.new(immediate),
-          NullSlot.new
-        )
-
         loop do
           clerk.deliver_next_item
         end
+      end
+
+      def clerk
+        Clerk.new(
+          QueuedJobs.new(waiting_queue, ->{ sleep 1 }, job_repository),
+          WaitingSlot.new(waiting_queue),
+          ImmediateSlot.new(immediate_queue),
+          NullSlot.new
+        )
+      end
+
+      def waiting_queue
+        @waiting_queue ||= factory.waiting_queue
+      end
+
+      def immediate_queue
+        @immediate_queue ||= factory.immediate_queue
+      end
+
+      def job_repository
+        @job_repository ||= factory.job_repository
+      end
+
+      def factory
+        @factory ||= QueueFactory.new(config)
+      end
+
+      def config
+        @config ||= JSON.parse(File.read(ARGV[0]))
       end
     end
   end

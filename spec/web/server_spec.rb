@@ -2,6 +2,13 @@ require_relative '../spec_helper'
 require 'json'
 require 'rack/test'
 require 'nokogiri'
+require 'sequel'
+
+module Plumb
+  module  Storage
+    DB = Sequel.sqlite('web/test.db')
+  end
+end
 
 ENV['RACK_ENV'] = 'test' # must be before server require
 require_relative '../../web/server'
@@ -18,7 +25,9 @@ describe "web server" do
 
   describe "getting an individual job" do
     it "is in JSON format" do
-      get('/jobs/unit-tests')
+      put('/jobs/jsony',
+          Plumb::Job.new(name: 'jsony', ready: true).to_json)
+      get('/jobs/jsony')
       last_response.content_type.must_include 'application/json'
     end
 
@@ -26,14 +35,54 @@ describe "web server" do
       put('/jobs/unit-tests',
           Plumb::Job.new(name: 'unit-tests', ready: true).to_json)
       get('/jobs/unit-tests')
-      JSON.parse(last_response.body)['name'].must_equal 'unit-tests'
-      JSON.parse(last_response.body)['ready'].must_equal true
+      last_json_response['name'].must_equal 'unit-tests'
+      last_json_response['ready'].must_equal true
+    end
+
+    it "responds with 404 if it doesn't exist" do
+      get('/jobs/foobypotato')
+      last_response.status.must_equal 404
+    end
+  end
+
+  describe "adding a successful build" do
+    describe "to a job that doesn't exist" do
+      it "responds with 404" do
+        post('/jobs/sdfgaag/builds', Plumb::BuildStatus.new(status: 'success').to_json)
+        last_response.status.must_equal 404
+      end
+    end
+
+    describe "to a job without siblings but with ancestors" do
+      it "readies child jobs" do
+        skip
+        parent = Plumb::Job.new(
+          name: 'parent',
+          ready: true,
+          children: ['child']
+        )
+        child = Plumb::Job.new(
+          name: 'child',
+          ready: false
+        )
+        put('/jobs/parent', parent.to_json)
+        put('/jobs/child', child.to_json)
+        post('/jobs/parent/builds',
+             Plumb::BuildStatus.new(status: 'success').to_json)
+        get('/jobs/child')
+        last_json_response['ready'].must_equal true
+      end
+
+      it "doesn't ready grandparent jobs"
     end
   end
 
   describe "feed" do
-    it "is empty when no builds have been stored" do
+    before do
       delete_all_jobs
+    end
+
+    it "is empty when no builds have been stored" do
       get '/dashboard/cctray.xml'
       feed.css("Projects>Project").must_be_empty
     end
@@ -44,8 +93,6 @@ describe "web server" do
     end
 
     it "shows a successful build" do
-      delete_all_jobs
-
       put '/jobs/unit-tests', Plumb::Job.new(name: 'unit-tests').to_json
       post '/jobs/unit-tests/builds', Plumb::BuildStatus.new(status: 'success').to_json
       get '/dashboard/cctray.xml'
@@ -59,9 +106,8 @@ describe "web server" do
         must_equal "http://example.org/dashboard/cctray.xml"
     end
 
+    # no API for updating builds, and no support in app either
     it "shows a failed build" do
-      delete_all_jobs
-
       put '/jobs/My-Project', Plumb::Job.new(name: 'My-Project').to_json
       post '/jobs/My-Project/builds', Plumb::BuildStatus.new(status: 'failure').to_json
 
@@ -77,8 +123,6 @@ describe "web server" do
     end
 
     it "shows a build in progress" do
-      delete_all_jobs
-
       put '/jobs/progress-project', Plumb::Job.new(name: 'progress-project').to_json
       post '/jobs/progress-project/builds', Plumb::BuildStatus.new(status: 'building').to_json
 
@@ -97,6 +141,12 @@ describe "web server" do
   def delete_all_jobs
     delete "/jobs/all"
     assert last_response.ok?, "bad DELETE response"
+  end
+
+  def last_json_response
+    JSON.parse(last_response.body)
+  rescue StandardError => e
+    raise "body could not be parsed as JSON: #{last_response.body}"
   end
 
   def project(name)

@@ -5,11 +5,6 @@ require_relative '../../../lib/plumb/job'
 module Plumb
   describe WebReporter do
     let(:host) { "http://some.place:8000" }
-    let(:mock_handler) {
-      MiniTest::Mock.new.tap do |handler|
-        def handler.handle_200(*); end
-      end
-    }
     let(:job) { Job.new(name: 'a-job') }
     let(:reporter) { WebReporter.new(host) }
     let(:any_path) { %r{^#{host}/.*} }
@@ -23,14 +18,14 @@ module Plumb
       WebMock.allow_net_connect!
     end
 
-    it "sends a building status to the endpoint, ensuring job exists" do
+    it "sends a building status to the endpoint" do
       stub_request(:put, any_path)
-      stub_request(:post, any_path)
       reporter.build_started(job)
 
       assert_requested(:put, 'http://some.place:8000/jobs/a-job',
                        body: job.to_json)
-      assert_requested(:post, 'http://some.place:8000/jobs/a-job/builds',
+      assert_requested(:put,
+                       %r{http://some.place:8000/jobs/a-job/builds/[-\h]+},
                        body: BuildStatus.new(status: 'building').to_json)
     end
 

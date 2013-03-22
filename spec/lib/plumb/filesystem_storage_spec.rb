@@ -1,14 +1,15 @@
 require_relative '../../spec_helper'
 require 'tmpdir'
 require 'pathname'
-require_relative '../../../lib/plumb/filesystem_job_storage'
+require_relative '../../../lib/plumb/filesystem_storage'
+require_relative '../../../lib/plumb/job'
 
 module Plumb
-  describe FileSystemJobStorage do
+  describe FileSystemStorage do
     it "stores and retrieves jobs, across instances" do
       with_nonexistent_file_path do |path|
-        storage1 = FileSystemJobStorage.new(path)
-        storage2 = FileSystemJobStorage.new(path)
+        storage1 = FileSystemStorage.new(Job, path)
+        storage2 = FileSystemStorage.new(Job, path)
 
         job = Job.new(id: 'bar')
         storage1 << job
@@ -22,8 +23,8 @@ module Plumb
 
     it "clears all jobs, across instances" do
       with_nonexistent_file_path do |path|
-        storage1 = FileSystemJobStorage.new(path)
-        storage2 = FileSystemJobStorage.new(path)
+        storage1 = FileSystemStorage.new(Job, path)
+        storage2 = FileSystemStorage.new(Job, path)
         storage1.clear
         storage1 << job = Job.new(foo: 'bar')
 
@@ -36,7 +37,7 @@ module Plumb
 
     it "can be mapped when jobs are present" do
       with_nonexistent_file_path do |path|
-        storage = FileSystemJobStorage.new(path)
+        storage = FileSystemStorage.new(Job, path)
         storage << Job.new(name: 'foo')
         storage << Job.new(name: 'bar')
 
@@ -46,7 +47,7 @@ module Plumb
 
     it "can be mapped when jobs aren't present" do
       with_nonexistent_file_path do |path|
-        storage = FileSystemJobStorage.new(path)
+        storage = FileSystemStorage.new(Job, path)
         storage.map(&:name).must_be_empty
         storage.clear
         storage.map(&:name).must_be_empty
@@ -55,7 +56,7 @@ module Plumb
 
     it "updates existing jobs with the shovel" do
       with_nonexistent_file_path do |path|
-        storage = FileSystemJobStorage.new(path)
+        storage = FileSystemStorage.new(Job, path)
         storage << Job.new(name: 'foo', script: 'rake')
         storage << Job.new(name: 'foo', script: 'rspec')
 
@@ -66,7 +67,7 @@ module Plumb
 
     it "can update a job by name using a block that returns a new job" do
       with_nonexistent_file_path do |path|
-        storage = FileSystemJobStorage.new(path)
+        storage = FileSystemStorage.new(Job, path)
         storage << Job.new(name: 'foo', script: 'rake')
 
         storage.update('foo') do |job|

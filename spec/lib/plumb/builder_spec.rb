@@ -1,32 +1,39 @@
 require_relative '../../spec_helper'
 require 'tempfile'
 require 'tmpdir'
-require_relative '../../../lib/plumb/build'
+require_relative '../../../lib/plumb/builder'
 require_relative '../../../lib/plumb/job'
+require_relative '../../../lib/plumb/promise'
 
 module Plumb
-  describe Build do
-    let(:unused_repo) { Class.new { def fetch(*); end }.new }
-    let(:spy_reporter) { Spy.new }
+  describe Builder do
+    let(:unused_code_repo) { Class.new { def fetch(*); end }.new }
     let(:stub_dir) { Struct.new(:path).new('/') }
 
-    it "requests a copy of the code from the repo" do
-      repo = Spy.new
-      url = '/some/repo.git'
-      build = Build.new(Job.new(repository_url: url), repo, spy_reporter)
+    it "requests a copy of the code, passing self as listener" do
+      code_repo = Spy.new
+      unused_job_repo = nil
+      job = Job.new(repository_url: '/some/repo.git')
 
-      build.run
-      repo.calls.must_equal [[:fetch, url, build]]
+      builder = Builder.new(job, code_repo, unused_job_repo)
+      builder.run
+
+      code_repo.calls.must_equal [[:fetch, job.repository_url, builder]]
     end
 
     describe "when the code is ready" do
-      it "passes the started job to the reporter" do
+      it "" do
         job = Job.new(name: 'foobar', script: 'true')
 
-        build = Build.new(job, unused_repo, spy_reporter)
+        reporter = Minitest::Mock.new
+        builder = Builder.new(job, unused_code_repo, reporter)
 
-        build.process_working_copy(stub_dir)
-        spy_reporter.calls.first.must_equal [:build_started, job]
+        reporter.expect(:build_started, nil, [job, build])
+        builder.process_working_copy(stub_dir)
+        reporter.verify
+      end
+
+      class WebReporterDouble
       end
 
       it "runs the job's script from the working copy" do
@@ -40,8 +47,9 @@ module Plumb
             file.chmod(500)
           end
 
-          build = Build.new(job, unused_repo, spy_reporter)
-          build.process_working_copy(working_copy)
+          stub_reporter = WebReporterDouble.new
+          builder = Builder.new(job, unused_code_repo, stub_reporter)
+          builder.process_working_copy(working_copy)
 
           side_effect_file.read.strip.must_equal "script output"
         end
@@ -50,17 +58,19 @@ module Plumb
       it "passes a successful job to the reporter" do
         job = Job.new(name: 'foobar', script: 'true')
 
-        build = Build.new(job, unused_repo, spy_reporter)
+        spy_reporter = Spy.new
+        builder = Builder.new(job, unused_code_repo, spy_reporter)
 
-        build.process_working_copy(stub_dir)
+        builder.process_working_copy(stub_dir)
         spy_reporter.calls.last.must_equal [:build_succeeded, job]
       end
 
       it "passes an unsuccessful job to the reporter" do
         job = Job.new(script: 'false')
 
-        build = Build.new(job, unused_repo, spy_reporter)
-        build.process_working_copy(stub_dir)
+        spy_reporter = Spy.new
+        builder = Builder.new(job, unused_code_repo, spy_reporter)
+        builder.process_working_copy(stub_dir)
         spy_reporter.calls.last.must_equal [:build_failed, job]
       end
     end
@@ -69,9 +79,9 @@ module Plumb
       let(:job) { Job.new(name: 'qux', script: 'whatever') }
 
       it "passes the job to the reporter" do
-        build = Build.new(job, unused_repo, spy_reporter)
+        builder = Builder.new(job, unused_code_repo, spy_reporter)
 
-        build.handle_clone_failure
+        builder.handle_clone_failure
         spy_reporter.calls.must_equal [[:build_failed, job]]
       end
     end

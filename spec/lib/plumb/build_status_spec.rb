@@ -20,6 +20,14 @@ module Plumb
         wont_equal(BuildStatus.new(status: :success))
     end
 
+    it "has a hash representation" do
+      BuildStatus.new(status: 'success').to_h.must_equal(status: 'success')
+    end
+
+    it "has a string representation" do
+      BuildStatus.new(status: :failure).to_s.must_equal 'failure'
+    end
+
     it "defaults to sleeping" do
       BuildStatus.new.status.must_equal :sleeping
     end

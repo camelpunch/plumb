@@ -48,6 +48,14 @@ STDIN). This thing needs to know whether there have been new changes to any of
 the repositories.
 
 
+HTTP interface to web server, which controls data
+-------------------------------------------------
+/jobs/:id               PUT
+/jobs/:id/builds/:id    PUT
+
+Use GUIDs to avoid identity crises
+
+
 Pipeline
 --------
 Enqueues everything into the waiting queue, in order.

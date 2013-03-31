@@ -5,7 +5,6 @@ require 'tmpdir'
 require_relative '../lib/plumb'
 require_relative '../lib/plumb/queued_jobs'
 require_relative '../lib/plumb/git_repository'
-require_relative '../lib/plumb/build'
 require_relative '../lib/plumb/web_reporter'
 require_relative '../lib/plumb/factories/queue_factory'
 

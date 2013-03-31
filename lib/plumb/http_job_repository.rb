@@ -3,6 +3,8 @@ require_relative 'job'
 
 module Plumb
   class HttpJobRepository
+    JobNotFound = Class.new(StandardError)
+
     def initialize(url)
       @url = url
     end
@@ -11,10 +13,14 @@ module Plumb
       Job.new(
         server.get("/jobs/#{job.to_param}")
       )
+    rescue MultiJson::DecodeError => e
+      raise JobNotFound
     end
 
     def create(job)
-      server.put("/jobs/#{job.to_param}", body: job.to_json).code == 200
+      response = server.put("/jobs/#{job.to_param}", body: job.to_json)
+      raise JobNotFound if response.code == 404
+      response.code == 200
     end
 
     private

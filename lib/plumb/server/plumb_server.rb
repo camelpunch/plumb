@@ -18,10 +18,12 @@ module Plumb
       }
     end
 
-    post '/projects' do
-      project = Project.create(JSON.parse(request.body.read))
-      status 201
-      response['Location'] = uri("/projects/#{project.to_param}")
+    put '/projects/:id' do
+      content_type 'application/json'
+      project = Project.create(
+        JSON.parse(request.body.read).merge(id: params[:id])
+      )
+      status 200
     end
 
     get '/projects/:id' do
@@ -30,11 +32,9 @@ module Plumb
     end
 
     put '/projects/:project_id/builds/:id' do
-      Project[params[:project_id]].add_build(JSON.parse(request.body.read))
-    end
-
-    delete '/projects/all' do
-      Project.delete
+      Project[params[:project_id]].add_build(
+        JSON.parse(request.body.read).merge(id: params[:id])
+      )
     end
   end
 end

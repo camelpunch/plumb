@@ -9,8 +9,8 @@ module Plumb
   describe Server do
     include Rack::Test::Methods
 
-    describe "creating a project (no ID supplied)" do
-      it "responds with a 201 with a GETable location of the new project" do
+    describe "posting a project" do
+      it "201s with the location of the new project" do
         post '/projects', JSON.generate(name: 'Unit Tests')
         last_response.status.must_equal 201
 
@@ -27,7 +27,7 @@ module Plumb
       end
     end
 
-    describe "adding a build to a project (client-generated ID)" do
+    describe "putting a build on a project (client-generated ID)" do
       it "is reflected in the CCTray XML feed" do
         post '/projects', JSON.generate(name: 'Project with a build')
         new_project_url = last_response.headers['Location']
@@ -39,17 +39,22 @@ module Plumb
         get '/dashboard/cctray.xml'
         last_response.status.must_equal 200
 
-        project_xml = project('Project with a build')
+        project_xml = feed.css("Projects>Project[name='Project with a build']").first()
         project_xml['lastBuildStatus'].must_equal 'Success'
         project_xml['activity'].must_equal 'Sleeping'
         project_xml['webUrl'].must_equal "http://example.org/dashboard/cctray.xml"
       end
     end
 
-    describe "CCTray XML feed" do
+    describe "getting the CCTray XML feed" do
       it "uses the XML content type" do
         get '/dashboard/cctray.xml'
         last_response.content_type.must_include 'text/xml'
+      end
+
+      it "always gives a 200" do
+        get '/dashboard/cctray.xml'
+        last_response.status.must_equal 200
       end
     end
 
@@ -63,10 +68,6 @@ module Plumb
 
     def feed
       Nokogiri::XML(last_response.body)
-    end
-
-    def project(name)
-      feed.css("Projects>Project[name='#{name}']").first
     end
   end
 end

@@ -7,6 +7,8 @@ module Plumb
   class Project < Sequel::Model
     one_to_many :builds
 
+    plugin :association_dependencies, builds: :delete
+
     def last_build_status
       return nil if builds.empty?
       builds_dataset.order(:started_at).last.status

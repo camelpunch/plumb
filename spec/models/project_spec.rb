@@ -7,6 +7,14 @@ module Plumb
       Project.new(name: 'unit-tests').name.must_equal 'unit-tests'
     end
 
+    it "deletes associated builds when it is deleted" do
+      project = Project.create
+      project.add_build(status: 'asdf')
+      builds_count_before_delete = Build.count
+      project.destroy
+      Build.count.must_equal builds_count_before_delete - 1
+    end
+
     describe "conversions" do
       describe "URL param" do
         it "is equal to its id" do
@@ -19,12 +27,13 @@ module Plumb
 
       describe "JSON" do
         it "contains all its attributes, without a root node" do
-          Project.create(name: "Foo").to_json.must_equal(
-            JSON.generate(id: 1,
-                          name: "Foo",
-                          activity: nil,
-                          repository_url: nil,
-                          ready: nil)
+          attributes = JSON.parse(Project.create(name: "Foo").to_json)
+          attributes.delete('id').must_be :>=, 1
+          attributes.must_equal(
+            "name" => "Foo",
+            "activity" => nil,
+            "repository_url" => nil,
+            "ready" => nil
           )
         end
       end

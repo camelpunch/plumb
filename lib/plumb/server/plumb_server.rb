@@ -32,5 +32,9 @@ module Plumb
     put '/projects/:project_id/builds/:id' do
       Project[params[:project_id]].add_build(JSON.parse(request.body.read))
     end
+
+    delete '/projects/all' do
+      Project.delete
+    end
   end
 end

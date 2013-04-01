@@ -32,9 +32,20 @@ module Plumb
     end
 
     put '/projects/:project_id/builds/:id' do
-      Project[params[:project_id]].add_build(
-        JSON.parse(request.body.read).merge(id: params[:id])
-      )
+      project = Project[params[:project_id]]
+      existing_build = project.builds_dataset.first(id: params[:id])
+
+      if existing_build
+        existing_build.update(JSON.parse(request.body.read))
+      else
+        begin
+          project.add_build(
+            JSON.parse(request.body.read).merge(id: params[:id])
+          )
+        rescue Sequel::ConstraintViolation
+          status 409
+        end
+      end
     end
   end
 end

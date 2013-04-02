@@ -1,8 +1,4 @@
-require_relative "../spec/spec_helper"
-require_relative "../lib/plumb/server/plumb_server"
-require "rack/test"
-require 'json'
-require 'nokogiri'
+require_relative "../spec/server_spec_helper"
 
 describe "plumb" do
   include Rack::Test::Methods

@@ -10,7 +10,7 @@ module Plumb
       set :views, File.join(root, '../../../app/views')
     end
 
-    get '/dashboard/cctray.xml' do
+    get '/cc.xml' do
       content_type 'text/xml'
       erb :cctray, locals: {
         projects: Project.all,

@@ -8,7 +8,7 @@ module ServerSpecHelpers
   end
 
   def get_dashboard
-    get '/dashboard/cctray.xml'
+    get '/cc.xml'
   end
 
   def json(data)

@@ -38,7 +38,7 @@ module Plumb
         project_xml = feed.css("Projects>Project[name='Project with a build']").first
         project_xml['lastBuildStatus'].must_equal 'Success'
         project_xml['activity'].must_equal 'Sleeping'
-        project_xml['webUrl'].must_equal "http://example.org/dashboard/cctray.xml"
+        project_xml['webUrl'].must_equal "http://example.org/cc.xml"
       end
     end
 

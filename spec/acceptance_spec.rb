@@ -16,8 +16,8 @@ describe "plumb" do
           'endpoint' => 'http://some.url/'
         },
         'projects' => {
-          "happy_build" => {
-            'name' => 'Happy Build',
+          "happy_project" => {
+            'name' => 'Happy Project',
             'script' => 'rake',
             'repository_url' => 'git://foo.bar'
           }
@@ -29,13 +29,14 @@ describe "plumb" do
       )
     end
 
-    project_activity('Happy Build').must_equal 'Building'
+    put_build 'happy_project', 'some-build-id', status: 'Building'
+    project_activity('Happy Project').must_equal 'Building'
 
     get_dashboard
-    build_id = last_build_label_for_project('Happy Build')
-    put_build 'happy_build', build_id, status: 'Success'
+    build_id = last_build_label_for_project('Happy Project')
+    put_build 'happy_project', build_id, status: 'Success'
 
-    project_activity('Happy Build').must_equal 'Sleeping'
+    project_activity('Happy Project').must_equal 'Sleeping'
   end
 
   def run_command_in_this_thread(path, first_arg)

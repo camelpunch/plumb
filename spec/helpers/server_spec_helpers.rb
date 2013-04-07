@@ -27,9 +27,9 @@ module ServerSpecHelpers
 
   def project_xml(name)
     get_dashboard
-    project_xml = feed.css("Projects>Project[name='#{name}']").first
-    raise IncompleteXML, last_response.body unless project_xml
-    project_xml
+    feed.css("Projects>Project[name='#{name}']").first.tap do |project_xml|
+      raise IncompleteXML, last_response.body unless project_xml
+    end
   end
 
   def project_activity(name)

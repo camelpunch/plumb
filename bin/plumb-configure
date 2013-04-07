@@ -20,8 +20,4 @@ projects_config.each do |id, project|
     "/projects/#{id}",
     JSON.generate(name: project['name'])
   )
-  connection.put(
-    "/projects/#{id}/builds/#{build_id}",
-    JSON.generate(status: 'Building')
-  )
 end

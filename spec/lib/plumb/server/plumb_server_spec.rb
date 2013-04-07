@@ -93,7 +93,7 @@ module Plumb
 
       it "includes the latest build's ID as its label" do
         put_project 'someproject', name: 'Get build label'
-        put_build 'someproject', 'mybuildid', status: "Success", completed_at: '2013-01-01 00:00'
+        put_build 'someproject', 'mybuildid', status: "Success"
         last_build_label_for_project('Get build label').must_equal 'mybuildid'
       end
     end

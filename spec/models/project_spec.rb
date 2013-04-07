@@ -71,6 +71,28 @@ module Plumb
           project.last_build_status.must_equal 'Failure'
         end
       end
+
+      describe "last build ID" do
+        it "is nil when there are no associated builds" do
+          project = Project.create(id: SecureRandom.uuid)
+          project.last_build_id.must_equal nil
+        end
+
+        it "is retrieved from the last started associated build" do
+          project = Project.create(id: SecureRandom.uuid)
+
+          ids = (1..3).map do SecureRandom.uuid end
+
+          project.add_build(id: ids[0], started_at: Date.new(0, 1, 1))
+          project.last_build_id.must_equal ids[0]
+
+          project.add_build(id: ids[1], started_at: Date.new(1066, 10, 14))
+          project.last_build_id.must_equal ids[1]
+
+          project.add_build(id: ids[2], started_at: Date.new(166, 10, 14))
+          project.last_build_id.must_equal ids[1]
+        end
+      end
     end
 
     describe "activity" do

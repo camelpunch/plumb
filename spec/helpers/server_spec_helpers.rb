@@ -1,4 +1,6 @@
 module ServerSpecHelpers
+  IncompleteXML = Class.new(StandardError)
+
   def put_project(id, attributes)
     put "/projects/#{id}", json(attributes)
   end
@@ -23,10 +25,19 @@ module ServerSpecHelpers
     Nokogiri::XML(last_response.body)
   end
 
-  def project_activity(name)
+  def project_xml(name)
     get_dashboard
     project_xml = feed.css("Projects>Project[name='#{name}']").first
-    project_xml['activity']
+    raise IncompleteXML, last_response.body unless project_xml
+    project_xml
+  end
+
+  def project_activity(name)
+    project_xml(name)['activity']
+  end
+
+  def last_build_label_for_project(name)
+    project_xml(name)['lastBuildLabel']
   end
 
   def app

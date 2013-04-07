@@ -12,7 +12,12 @@ module Plumb
 
     def last_build_status
       return 'Unknown' if builds.empty?
-      builds_dataset.order(:started_at).last.status
+      last_build.status
+    end
+
+    def last_build_id
+      return nil if builds.empty?
+      last_build.id
     end
 
     def activity
@@ -23,6 +28,12 @@ module Plumb
 
     def to_json
       JSON.generate to_hash
+    end
+
+    private
+
+    def last_build
+      builds_dataset.order(:started_at).last
     end
   end
 end

@@ -50,7 +50,7 @@ module Plumb
         xml['webUrl'].must_equal "http://example.org/cc.xml"
       end
 
-      it "responds with success" do
+      it "responds with success JSON" do
         project_id = SecureRandom.uuid
         build_id = SecureRandom.uuid
 
@@ -59,6 +59,7 @@ module Plumb
 
         last_response.status.must_equal 200
         last_response.body.must_equal '{}'
+        last_response.content_type.must_include 'application/json'
       end
     end
 

@@ -33,6 +33,7 @@ module Plumb
     end
 
     put '/projects/:project_id/builds/:id' do
+      content_type 'application/json'
       project = Project[params[:project_id]]
       existing_build = project.builds_dataset.first(id: params[:id])
 

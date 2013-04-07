@@ -11,9 +11,19 @@ module Plumb
         put_project id, name: 'My New Project'
         last_response.status.must_equal 200
 
-        get_dashboard
-        project_xml = feed.css("Projects>Project[name='My New Project']").first
-        project_xml['lastBuildStatus'].must_equal 'Unknown'
+        project_xml('My New Project')['lastBuildStatus'].
+          must_equal 'Unknown'
+      end
+    end
+
+    describe "putting an existing project" do
+      it "updates the project" do
+        id = SecureRandom.uuid
+        put_project id, name: 'My New Project'
+        put_project id, name: 'My Renamed Project'
+
+        project_xml('My Renamed Project')['lastBuildStatus'].
+          must_equal 'Unknown'
       end
     end
 
@@ -34,11 +44,21 @@ module Plumb
         put_project project_id, name: 'Project with a build'
         put_build project_id, build_id, status: "Success", completed_at: '2013-01-01 00:00'
 
-        get_dashboard
-        project_xml = feed.css("Projects>Project[name='Project with a build']").first
-        project_xml['lastBuildStatus'].must_equal 'Success'
-        project_xml['activity'].must_equal 'Sleeping'
-        project_xml['webUrl'].must_equal "http://example.org/cc.xml"
+        xml = project_xml('Project with a build')
+        xml['lastBuildStatus'].must_equal 'Success'
+        xml['activity'].must_equal 'Sleeping'
+        xml['webUrl'].must_equal "http://example.org/cc.xml"
+      end
+
+      it "responds with success" do
+        project_id = SecureRandom.uuid
+        build_id = SecureRandom.uuid
+
+        put_project project_id, name: 'Project with a build'
+        put_build project_id, build_id, status: "Success", completed_at: '2013-01-01 00:00'
+
+        last_response.status.must_equal 200
+        last_response.body.must_equal '{}'
       end
     end
 
@@ -53,9 +73,7 @@ module Plumb
         put_build project_id, build_id,
           status: "Success", completed_at: '2013-01-02 00:00'
 
-        get_dashboard
-        project_xml = feed.css("Projects>Project[name='Existence']").first
-        project_xml['lastBuildStatus'].must_equal 'Success'
+        project_xml('Existence')['lastBuildStatus'].must_equal 'Success'
       end
     end
 
@@ -74,9 +92,7 @@ module Plumb
           status: "Success", completed_at: '2013-01-02 00:00'
         last_response.status.must_equal 409
 
-        get_dashboard
-        project_xml = feed.css("Projects>Project[name='Project1']").first
-        project_xml['activity'].must_equal 'Building'
+        project_xml('Project1')['activity'].must_equal 'Building'
       end
     end
 

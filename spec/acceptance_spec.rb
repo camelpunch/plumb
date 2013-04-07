@@ -8,7 +8,7 @@ describe "plumb" do
 
   it "shows various statuses for a build's lifecycle in the CCTray feed" do
     Dir.mktmpdir do |dir|
-      config_path = "#{dir}/ci.yml"
+      config_path = "#{dir}/plumb.yml"
       IO.write config_path, Psych.dump(
         'server' => {
           'adapter' => ['rack', 'Plumb::Server'],
@@ -22,10 +22,8 @@ describe "plumb" do
           }
         }
       )
-      run_command_in_this_thread('plumb-configure', config_path)
-
-      # start build
-      put_build 'happy_project', 'some-build-id', status: 'Building'
+      run_command_in_this_thread(dir, 'plumb-configure')
+      run_command_in_this_thread(dir, 'plumb-run', 'happy-project')
       project_activity('Happy Project').must_equal 'Building'
 
       # finish build
@@ -37,11 +35,15 @@ describe "plumb" do
     end
   end
 
-  def run_command_in_this_thread(filename, *args)
+  def run_command_in_this_thread(working_dir, filename, *args)
+    executable_path = File.expand_path("../../bin/#{filename}", __FILE__)
+    old_working_dir = Dir.pwd
+    Dir.chdir(working_dir)
     ARGV.clear
     args.each do |arg|
       ARGV << arg
     end
-    load File.expand_path("../../bin/#{filename}", __FILE__)
+    load executable_path
+    Dir.chdir old_working_dir
   end
 end

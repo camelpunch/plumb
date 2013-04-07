@@ -11,8 +11,9 @@ connection = Faraday.new(url: config.endpoint) do |faraday|
 end
 
 config.projects.each do |project|
+  build_id = SecureRandom.uuid
   connection.put(
-    "/projects/#{project.to_param}",
-    JSON.generate(name: project.name)
+    "/projects/#{project.to_param}/builds/#{build_id}",
+    JSON.generate(status: "Building")
   )
 end

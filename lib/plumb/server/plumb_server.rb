@@ -20,9 +20,10 @@ module Plumb
 
     put '/projects/:id' do
       content_type 'application/json'
-      project = Project.create(
-        JSON.parse(request.body.read).merge(id: params[:id])
-      )
+      attributes = JSON.parse(request.body.read).merge(id: params[:id])
+      existing = Project[params[:id]]
+      existing ? existing.update(attributes)
+               : Project.create(attributes)
       status 200
     end
 
@@ -46,6 +47,7 @@ module Plumb
           status 409
         end
       end
+      '{}'
     end
   end
 end

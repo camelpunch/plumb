@@ -1,5 +1,5 @@
 require 'sinatra/base'
-require_relative '../../../app/models/project'
+require_relative '../../../app/models/storage/project'
 
 module Plumb
   class Server < Sinatra::Base
@@ -13,7 +13,7 @@ module Plumb
     get '/cc.xml' do
       content_type 'text/xml'
       erb :cctray, locals: {
-        projects: Project.all,
+        projects: Storage::Project.all,
         web_url: request.url
       }
     end
@@ -21,20 +21,20 @@ module Plumb
     put '/projects/:id' do
       content_type 'application/json'
       attributes = JSON.parse(request.body.read).merge(id: params[:id])
-      existing = Project[params[:id]]
+      existing = Storage::Project[params[:id]]
       existing ? existing.update(attributes)
-               : Project.create(attributes)
+               : Storage::Project.create(attributes)
       status 200
     end
 
     get '/projects/:id' do
       content_type 'application/json'
-      Project[params[:id]].to_json
+      Storage::Project[params[:id]].to_json
     end
 
     put '/projects/:project_id/builds/:id' do
       content_type 'application/json'
-      project = Project[params[:project_id]]
+      project = Storage::Project[params[:project_id]]
       existing_build = project.builds_dataset.first(id: params[:id])
 
       if existing_build

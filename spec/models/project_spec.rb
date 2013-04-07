@@ -4,8 +4,8 @@ require_relative '../../app/models/project'
 module Plumb
   describe Project do
     it "has a name" do
-      Project.new(id: SecureRandom.uuid, name: 'unit-tests').name.
-        must_equal 'unit-tests'
+      Project.new(id: SecureRandom.uuid, name: 'unit-tests').
+        name.must_equal 'unit-tests'
     end
 
     it "deletes associated builds when it is deleted" do
@@ -35,7 +35,8 @@ module Plumb
               "name" => "Foo",
               "activity" => nil,
               "repository_url" => nil,
-              "ready" => nil
+              "ready" => nil,
+              "script" => nil
           )
         end
       end

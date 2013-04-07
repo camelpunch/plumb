@@ -1,23 +1,19 @@
 #!/usr/bin/env ruby
 
 require 'bundler/setup'
-require 'psych'
 require 'faraday'
 require 'json'
+require_relative '../app/models/config'
 
-config = Psych.load_file(ARGV[0])
-server_config = config.fetch 'server'
-projects_config = config.fetch 'projects'
-
-connection = Faraday.new(url: server_config.fetch('endpoint')) do |faraday|
-  adapter, app_name = server_config.fetch('adapter')
-  faraday.adapter adapter.to_sym, Module.const_get(app_name)
+config = Plumb::Config.load_file ARGV[0]
+connection = Faraday.new(url: config.endpoint) do |faraday|
+  faraday.adapter *config.adapter
 end
 
-projects_config.each do |id, project|
+config.projects.each do |project|
   build_id = SecureRandom.uuid
   connection.put(
-    "/projects/#{id}",
-    JSON.generate(name: project['name'])
+    "/projects/#{project.to_param}",
+    JSON.generate(name: project.name)
   )
 end

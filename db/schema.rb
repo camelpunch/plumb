@@ -3,6 +3,7 @@ DB.create_table :projects do
   String :name
   String :activity
   String :repository_url
+  String :script
   Boolean :ready
 end
 

@@ -37,14 +37,16 @@ module Plumb
     end
 
     describe "putting a new build on a project" do
+      let(:new_name) { SecureRandom.hex }
+
       it "is reflected in the CCTray XML feed" do
         project_id = SecureRandom.uuid
         build_id = SecureRandom.uuid
 
-        put_project project_id, name: 'Project with a build'
+        put_project project_id, name: new_name
         put_build project_id, build_id, status: "Success", completed_at: '2013-01-01 00:00'
 
-        xml = project_xml('Project with a build')
+        xml = project_xml(new_name)
         xml['lastBuildStatus'].must_equal 'Success'
         xml['activity'].must_equal 'Sleeping'
         xml['webUrl'].must_equal "http://example.org/cc.xml"
@@ -54,7 +56,7 @@ module Plumb
         project_id = SecureRandom.uuid
         build_id = SecureRandom.uuid
 
-        put_project project_id, name: 'Project with a build'
+        put_project project_id, name: new_name
         put_build project_id, build_id, status: "Success", completed_at: '2013-01-01 00:00'
 
         last_response.status.must_equal 200

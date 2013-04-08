@@ -1,2 +1,3 @@
 require 'sequel'
-DB = Sequel.sqlite
+require 'logger'
+DB = Sequel.sqlite(logger: Logger.new('log/test_db.log'))

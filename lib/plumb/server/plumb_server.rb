@@ -1,8 +1,11 @@
 require 'sinatra/base'
 require_relative '../../../app/models/storage/project'
+require_relative '../../../app/models/database_project_mapper'
 
 module Plumb
   class Server < Sinatra::Base
+    Projects = DatabaseProjectMapper.new
+
     configure do
       set :raise_errors, true
       set :show_exceptions, false
@@ -13,7 +16,7 @@ module Plumb
     get '/cc.xml' do
       content_type 'text/xml'
       erb :cctray, locals: {
-        projects: Storage::Project.all,
+        projects: Projects.all,
         web_url: request.url
       }
     end

@@ -1,2 +1,3 @@
 db/*.db
 plumb.yml
+log/*.log

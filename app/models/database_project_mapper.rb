@@ -4,6 +4,7 @@ require_relative 'project'
 module Plumb
   class DatabaseProjectMapper
     Error = Class.new(StandardError)
+    ProjectNotFound = Class.new(Error)
 
     def all
       Storage::Project.all.map { |stored_project|
@@ -17,6 +18,7 @@ module Plumb
 
     def get(id)
       project = Storage::Project[id]
+      raise ProjectNotFound, "no project with id #{id}" unless project
       Project.new(project.to_hash.merge(builds: project.builds))
     end
 
@@ -32,6 +34,7 @@ module Plumb
 
     def update(id, attributes)
       project = Storage::Project[id]
+      raise ProjectNotFound, "no project with id #{id}" unless project
       project.update(without_builds(attributes))
       if attributes[:builds]
         project.add_build(attributes[:builds].first.to_hash)

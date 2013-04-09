@@ -24,9 +24,13 @@ module Plumb
     put '/projects/:id' do
       content_type 'application/json'
       attributes = JSON.parse(request.body.read).merge(id: params[:id])
-      existing = Storage::Project[params[:id]]
-      existing ? existing.update(attributes)
-               : Storage::Project.create(attributes)
+
+      begin
+        Projects.update(params[:id], attributes)
+      rescue DatabaseProjectMapper::ProjectNotFound
+        Projects.insert(attributes)
+      end
+
       status 200
     end
 

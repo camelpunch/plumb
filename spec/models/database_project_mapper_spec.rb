@@ -32,18 +32,23 @@ module Plumb
       }.merge(attrs)
     end
 
-    it "can retrieve a single project by its ID, including its builds" do
-      attributes = project_hash(
-        id: project_id,
-        builds: [
-          build_hash(id: build_id, status: 'Success')
-        ]
-      )
+    describe "getting a project by ID" do
+      it "includes its builds" do
+        attributes = project_hash(
+          id: project_id,
+          builds: [ build_hash(id: build_id, status: 'Success') ]
+        )
 
-      mapper.insert(attributes)
+        mapper.insert(attributes)
 
-      project = mapper.get(project_id)
-      project.to_hash.must_equal(attributes)
+        project = mapper.get(project_id)
+        project.to_hash.must_equal(attributes)
+      end
+
+      it "raises an exception if there is no such project" do
+        -> { mapper.get('made-up-id') }.
+          must_raise DatabaseProjectMapper::ProjectNotFound
+      end
     end
 
     describe "creating a single project" do
@@ -102,6 +107,11 @@ module Plumb
                       builds: [Build.new(id: build_id, status: 'Failed')])
         mapper.all.select {|p| p.name == old_name}.
           flat_map(&:builds).map(&:status).must_equal ['Failed']
+      end
+
+      it "raises an exception if the project is not found" do
+        -> { mapper.update('made-up-id', name: 'blah') }.
+          must_raise DatabaseProjectMapper::ProjectNotFound
       end
 
       describe "when a build already exists" do

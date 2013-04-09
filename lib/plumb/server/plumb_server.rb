@@ -1,5 +1,4 @@
 require 'sinatra/base'
-require_relative '../../../app/models/storage/project'
 require_relative '../../../app/models/database_project_mapper'
 
 module Plumb

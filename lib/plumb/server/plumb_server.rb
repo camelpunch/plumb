@@ -36,25 +36,21 @@ module Plumb
 
     get '/projects/:id' do
       content_type 'application/json'
-      Storage::Project[params[:id]].to_json
+      Projects.get(params[:id]).to_json
     end
 
     put '/projects/:project_id/builds/:id' do
       content_type 'application/json'
-      project = Storage::Project[params[:project_id]]
-      existing_build = project.builds_dataset.first(id: params[:id])
 
-      if existing_build
-        existing_build.update(JSON.parse(request.body.read))
-      else
-        begin
-          project.add_build(
-            JSON.parse(request.body.read).merge(id: params[:id])
-          )
-        rescue Sequel::ConstraintViolation
-          status 409
-        end
+      begin
+        Projects.update(
+          params[:project_id],
+          builds: [ JSON.parse(request.body.read).merge(id: params[:id]) ]
+        )
+      rescue DatabaseProjectMapper::Conflict
+        status 409
       end
+
       '{}'
     end
   end

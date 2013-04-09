@@ -12,10 +12,13 @@ module Plumb
 
       it "deletes associated builds when it is deleted" do
         project = Project.create(id: SecureRandom.uuid)
-        project.add_build(id: SecureRandom.uuid, status: 'asdf')
-        builds_count_before_delete = Build.count
+        unique_status = SecureRandom.hex
+        project.add_build(id: SecureRandom.uuid, status: unique_status)
+
+        finder = -> { Build.first(status: unique_status) }
+        finder.call.wont_be :nil?
         project.destroy
-        Build.count.must_equal builds_count_before_delete - 1
+        finder.call.must_be :nil?
       end
 
       describe "conversions" do

@@ -43,6 +43,7 @@ module Plumb
 
         project = mapper.get(project_id)
         project.to_hash.must_equal(attributes)
+        project.builds.first.must_be_kind_of Build
       end
 
       it "raises an exception if there is no such project" do
@@ -79,7 +80,7 @@ module Plumb
 
         it "raises an exception" do
           -> { mapper.insert(attributes) }.
-            must_raise DatabaseProjectMapper::Error
+            must_raise DatabaseProjectMapper::Conflict
         end
       end
     end
@@ -90,8 +91,7 @@ module Plumb
           mapper.delete(project)
         end
 
-        attributes = project_hash(id: project_id, name: old_name)
-        mapper.insert(attributes)
+        mapper.insert(project_hash(id: project_id, name: old_name))
       end
 
       it "updates the existing project attributes" do
@@ -100,22 +100,39 @@ module Plumb
         mapper.all.map(&:name).must_include(new_name)
       end
 
-      it "updates its builds" do
-        mapper.all.select {|p| p.name == old_name}.
-          flat_map(&:builds).map(&:status).must_be :empty?
-        mapper.update(project_id,
-                      builds: [Build.new(id: build_id, status: 'Failed')])
-        mapper.all.select {|p| p.name == old_name}.
-          flat_map(&:builds).map(&:status).must_equal ['Failed']
-      end
-
       it "raises an exception if the project is not found" do
         -> { mapper.update('made-up-id', name: 'blah') }.
           must_raise DatabaseProjectMapper::ProjectNotFound
       end
 
-      describe "when a build already exists" do
-        it "raises an exception"
+      it "adds a single build" do
+        mapper.update(project_id, builds: [{id: build_id, status: 'Failed'}])
+        mapper.all.find {|p| p.name == old_name}.
+          builds.map(&:status).must_equal ['Failed']
+      end
+
+      it "adds multiple builds"
+
+      it "updates a single build" do
+        mapper.update(project_id, builds: [{id: build_id, status: 'Failed'}])
+        mapper.update(project_id, builds: [{id: build_id, status: 'Success'}])
+        mapper.all.find {|p| p.name == old_name}.
+          builds.map(&:status).must_equal ['Success']
+      end
+
+      it "updates multiple builds"
+
+      it "raises an exception if a new build ID belongs to another project" do
+        mapper.insert(
+          id: SecureRandom.uuid,
+          builds: [ { id: build_id, status: 'success' } ]
+        )
+        -> {
+          mapper.update(
+            project_id,
+            builds: [ { id: build_id, status: 'success' } ]
+        )
+        }.must_raise DatabaseProjectMapper::Conflict
       end
     end
   end

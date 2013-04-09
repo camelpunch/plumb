@@ -5,6 +5,7 @@ module Plumb
   class DatabaseProjectMapper
     Error = Class.new(StandardError)
     ProjectNotFound = Class.new(Error)
+    Conflict = Class.new(Error)
 
     def all
       Storage::Project.all.map { |stored_project|
@@ -19,7 +20,9 @@ module Plumb
     def get(id)
       project = Storage::Project[id]
       raise ProjectNotFound, "no project with id #{id}" unless project
-      Project.new(project.to_hash.merge(builds: project.builds))
+      Project.new(project.to_hash.merge(
+        builds: project.builds.map {|build| Build.new(build.to_hash)}
+      ))
     end
 
     def insert(attributes)
@@ -29,16 +32,28 @@ module Plumb
         Storage::Project[id].add_build(attributes[:builds].first)
       end
     rescue Sequel::ConstraintViolation => e
-      raise Error, e.message
+      raise Conflict, e.message
     end
 
     def update(id, attributes)
       project = Storage::Project[id]
       raise ProjectNotFound, "no project with id #{id}" unless project
+
       project.update(without_builds(attributes))
+
       if attributes[:builds]
-        project.add_build(attributes[:builds].first.to_hash)
+        attributes[:builds].each do |build_attrs|
+          existing = project.builds_dataset.first(id: build_attrs[:id])
+          if existing
+            existing.update(build_attrs)
+          else
+            project.add_build(attributes[:builds].first.to_hash)
+          end
+        end
       end
+
+    rescue Sequel::ConstraintViolation => e
+      raise Conflict, e.message
     end
 
     def delete(project)

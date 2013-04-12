@@ -23,7 +23,7 @@ describe "plumb" do
         }
       )
       run_command_in_this_thread(dir, 'plumb-configure')
-      run_command_in_this_thread(dir, 'plumb-run', 'happy-project')
+      run_command_in_this_thread(dir, 'plumb-run')
       project_activity('Happy Project').must_equal 'Building'
 
       # finish build

@@ -9,7 +9,8 @@ module Plumb
     let(:old_name) { SecureRandom.hex }
     let(:new_name) { SecureRandom.hex }
     let(:project_id) { SecureRandom.uuid }
-    let(:build_id) { SecureRandom.uuid }
+    let(:build_id1) { SecureRandom.uuid }
+    let(:build_id2) { SecureRandom.uuid }
 
     def project_hash(attrs = {})
       {
@@ -36,7 +37,10 @@ module Plumb
       it "includes its builds" do
         attributes = project_hash(
           id: project_id,
-          builds: [ build_hash(id: build_id, status: 'Success') ]
+          builds: [
+            build_hash(id: build_id1, status: 'Success'),
+            build_hash(id: build_id2, status: 'Failure'),
+          ]
         )
 
         mapper.insert(attributes)
@@ -52,14 +56,34 @@ module Plumb
       end
     end
 
+    describe "getting a project by name" do
+      it "includes its builds" do
+        attributes = project_hash(
+          id: project_id,
+          name: "Cool Build",
+          builds: [ build_hash(id: build_id1, status: 'Success') ]
+        )
+
+        mapper.insert(attributes)
+
+        project = mapper.find_by_name("Cool Build")
+        project.to_hash.must_equal(attributes)
+        project.builds.first.must_be_kind_of Build
+      end
+
+      it "returns nil if there is no such project" do
+        mapper.find_by_name('made-up-name').must_be :nil?
+      end
+    end
+
     describe "creating a single project" do
       it "updates the collection with the new project" do
         attributes = project_hash(
           name: new_name,
-          builds: [ build_hash(id: build_id, status: 'Success') ]
+          builds: [ build_hash(id: build_id1, status: 'Success') ]
         )
         mapper.insert(attributes)
-        stored_project = mapper.all.find {|p| p.name == new_name}
+        stored_project = mapper.find_by_name new_name
         stored_project.must_be_kind_of Project
         stored_project.builds.first.must_be_kind_of Build
         stored_project.to_hash.must_equal(attributes)
@@ -106,58 +130,53 @@ module Plumb
       end
 
       it "adds a single build" do
-        mapper.update(project_id, builds: [{id: build_id, status: 'Failed'}])
-        mapper.all.find {|p| p.name == old_name}.
-          builds.map(&:status).must_equal ['Failed']
+        mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
+        mapper.find_by_name(old_name).builds.map(&:status).
+          must_equal ['Failed']
       end
 
       it "adds multiple builds" do
-        id1 = SecureRandom.uuid
-        id2 = SecureRandom.uuid
-
         mapper.update(
           project_id,
           builds: [
-            {id: id1, status: 'Failed'},
-            {id: id2, status: 'Success'},
+            {id: build_id1, status: 'Failed'},
+            {id: build_id2, status: 'Success'},
           ]
         )
-        mapper.all.find {|p| p.name == old_name}.
-          builds.map(&:status).must_equal %w(Failed Success)
+        mapper.find_by_name(old_name).builds.map(&:status).
+          must_equal %w(Failed Success)
       end
 
       it "doesn't update the project if adding a build fails"
 
       it "updates a single build" do
-        mapper.update(project_id, builds: [{id: build_id, status: 'Failed'}])
-        mapper.update(project_id, builds: [{id: build_id, status: 'Success'}])
-        mapper.all.find {|p| p.name == old_name}.
-          builds.map(&:status).must_equal ['Success']
+        mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
+        mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
+        mapper.find_by_name(old_name).builds.map(&:status).
+          must_equal ['Success']
       end
 
       it "updates multiple builds" do
-        id1 = SecureRandom.uuid
-        id2 = SecureRandom.uuid
-        mapper.update(project_id, builds: [{id: id1, status: 'Failed'}])
-        mapper.update(project_id, builds: [{id: id2, status: 'Failed'}])
+        mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
+        mapper.update(project_id, builds: [{id: build_id2, status: 'Failed'}])
 
-        mapper.update(project_id, builds: [{id: id1, status: 'Success'}])
-        mapper.update(project_id, builds: [{id: id2, status: 'Success'}])
+        mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
+        mapper.update(project_id, builds: [{id: build_id2, status: 'Success'}])
 
-        mapper.all.find {|p| p.name == old_name}.
-          builds.map(&:status).must_equal %w(Success Success)
+        mapper.find_by_name(old_name).builds.map(&:status).
+          must_equal %w(Success Success)
       end
 
       it "raises an exception if a new build ID belongs to another project" do
         mapper.insert(
           id: SecureRandom.uuid,
-          builds: [ { id: build_id, status: 'success' } ]
+          builds: [ { id: build_id1, status: 'success' } ]
         )
         -> {
           mapper.update(
             project_id,
-            builds: [ { id: build_id, status: 'success' } ]
-        )
+            builds: [ { id: build_id1, status: 'success' } ]
+          )
         }.must_raise DatabaseProjectMapper::Conflict
       end
     end

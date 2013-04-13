@@ -8,28 +8,23 @@ module Plumb
     Conflict = Class.new(Error)
 
     def all
-      Storage::Project.all.map { |stored_project|
-        Project.new(stored_project.to_hash).tap do |project|
-          project.builds = stored_project.builds.map {|build|
-            Build.new(build.to_hash)
-          }
-        end
-      }
+      Storage::Project.all.map &method(:hydrate)
     end
 
     def get(id)
       project = Storage::Project[id]
       raise ProjectNotFound, "no project with id #{id}" unless project
-      Project.new(project.to_hash.merge(
-        builds: project.builds.map {|build| Build.new(build.to_hash)}
-      ))
+      hydrate project
+    end
+
+    def find_by_name(name)
+      hydrate Storage::Project.first(name: name)
     end
 
     def insert(attributes)
-      id = attributes[:id]
       Storage::Project.create(without_builds(attributes))
-      if attributes[:builds]
-        Storage::Project[id].add_build(attributes[:builds].first)
+      attributes.fetch(:builds, []).each do |build_attrs|
+        Storage::Project[attributes[:id]].add_build(build_attrs)
       end
     rescue Sequel::ConstraintViolation => e
       raise Conflict, e.message
@@ -41,9 +36,7 @@ module Plumb
 
       project.update(without_builds(attributes))
 
-      return unless attributes[:builds]
-
-      attributes[:builds].each do |build_attrs|
+      attributes.fetch(:builds, []).each do |build_attrs|
         existing = project.builds_dataset.first(id: build_attrs[:id])
         if existing
           existing.update(build_attrs)
@@ -61,6 +54,15 @@ module Plumb
     end
 
     private
+
+    def hydrate(stored_project)
+      return nil if stored_project.nil?
+      Project.new(stored_project.to_hash).tap do |project|
+        project.builds = stored_project.builds.map {|build|
+          Build.new(build.to_hash)
+        }
+      end
+    end
 
     def without_builds(attributes)
       attributes.reject {|key, value| key == :builds}

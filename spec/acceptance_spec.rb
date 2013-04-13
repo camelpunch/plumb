@@ -7,9 +7,8 @@ describe "plumb" do
   include ServerSpecHelpers
 
   it "shows various statuses for a build's lifecycle in the CCTray feed" do
-    Dir.mktmpdir do |dir|
-      config_path = "#{dir}/plumb.yml"
-      IO.write config_path, Psych.dump(
+    in_temp_path do |path|
+      IO.write path.join('plumb.yml'), Psych.dump(
         'server' => {
           'adapter' => ['rack', 'Plumb::Server'],
           'endpoint' => 'http://some.url/'
@@ -17,13 +16,13 @@ describe "plumb" do
         'projects' => {
           "happy_project" => {
             'name' => 'Happy Project',
-            'script' => "> '#{dir}/created_file'",
+            'script' => "> '#{path.join('created_file')}'",
             'repository_url' => 'git://foo.bar'
           }
         }
       )
-      run_command_in_this_thread(dir, 'plumb-configure')
-      run_command_in_this_thread(dir, 'plumb-run')
+      run_command_in_this_thread(path, 'plumb-configure')
+      run_command_in_this_thread(path, 'plumb-run')
       project_activity('Happy Project').must_equal 'Building'
 
       # finish build
@@ -32,6 +31,12 @@ describe "plumb" do
       put_build 'happy_project', build_id, status: 'Success'
 
       project_activity('Happy Project').must_equal 'Sleeping'
+    end
+  end
+
+  def in_temp_path(&block)
+    Dir.mktmpdir do |dir|
+      block.call(Pathname(dir))
     end
   end
 

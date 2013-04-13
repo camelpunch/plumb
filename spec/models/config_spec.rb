@@ -21,10 +21,10 @@ module Plumb
 
     it "instantiates an array of Projects from the config" do
       config.projects.must_equal [
-        Storage::Project.new(id: 'happy_project',
-                             name: 'Happy Project',
-                             script: 'rake',
-                             repository_url: 'git://foo.bar')
+        Project.new(id: 'happy_project',
+                    name: 'Happy Project',
+                    script: 'rake',
+                    repository_url: 'git://foo.bar')
       ]
     end
 

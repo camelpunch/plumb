@@ -1,6 +1,5 @@
 require 'psych'
 require_relative '../../config/database' unless defined? DB
-require_relative 'storage/project'
 require_relative '../../lib/plumb/server/plumb_server'
 
 module Plumb
@@ -15,11 +14,11 @@ module Plumb
       server = config.fetch('server')
       adapter, app_name = server.fetch('adapter')
       @endpoint = server['endpoint']
-      @adapter =
-        app_name ? [ adapter.to_sym, Module.const_get(app_name) ]
-                 : [ adapter.to_sym ]
+      @adapter = [ adapter.to_sym ]
+      @adapter << Module.const_get(app_name) if app_name
+
       @projects = config.fetch('projects').map { |id, project_config|
-        Storage::Project.new(project_config.merge(id: id))
+        Project.new(project_config.merge(id: id))
       }
     end
   end

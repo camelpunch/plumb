@@ -41,14 +41,14 @@ module Plumb
 
       project.update(without_builds(attributes))
 
-      if attributes[:builds]
-        attributes[:builds].each do |build_attrs|
-          existing = project.builds_dataset.first(id: build_attrs[:id])
-          if existing
-            existing.update(build_attrs)
-          else
-            project.add_build(attributes[:builds].first.to_hash)
-          end
+      return unless attributes[:builds]
+
+      attributes[:builds].each do |build_attrs|
+        existing = project.builds_dataset.first(id: build_attrs[:id])
+        if existing
+          existing.update(build_attrs)
+        else
+          project.add_build(build_attrs)
         end
       end
 

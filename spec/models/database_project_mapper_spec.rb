@@ -111,7 +111,22 @@ module Plumb
           builds.map(&:status).must_equal ['Failed']
       end
 
-      it "adds multiple builds"
+      it "adds multiple builds" do
+        id1 = SecureRandom.uuid
+        id2 = SecureRandom.uuid
+
+        mapper.update(
+          project_id,
+          builds: [
+            {id: id1, status: 'Failed'},
+            {id: id2, status: 'Success'},
+          ]
+        )
+        mapper.all.find {|p| p.name == old_name}.
+          builds.map(&:status).must_equal %w(Failed Success)
+      end
+
+      it "doesn't update the project if adding a build fails"
 
       it "updates a single build" do
         mapper.update(project_id, builds: [{id: build_id, status: 'Failed'}])
@@ -120,7 +135,18 @@ module Plumb
           builds.map(&:status).must_equal ['Success']
       end
 
-      it "updates multiple builds"
+      it "updates multiple builds" do
+        id1 = SecureRandom.uuid
+        id2 = SecureRandom.uuid
+        mapper.update(project_id, builds: [{id: id1, status: 'Failed'}])
+        mapper.update(project_id, builds: [{id: id2, status: 'Failed'}])
+
+        mapper.update(project_id, builds: [{id: id1, status: 'Success'}])
+        mapper.update(project_id, builds: [{id: id2, status: 'Success'}])
+
+        mapper.all.find {|p| p.name == old_name}.
+          builds.map(&:status).must_equal %w(Success Success)
+      end
 
       it "raises an exception if a new build ID belongs to another project" do
         mapper.insert(

@@ -1,6 +1,6 @@
 module Plumb
   module ProjectMapperSharedTests
-    attr_reader :mapper, :project_id, :build_id1, :build_id2
+    attr_reader :project_id, :build_id1, :build_id2
 
     def setup
       @project_id = SecureRandom.uuid

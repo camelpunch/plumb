@@ -8,7 +8,6 @@ module Plumb
     configure do
       set :raise_errors, true
       set :show_exceptions, false
-
       set :views, File.join(root, '../../../app/views')
     end
 

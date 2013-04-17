@@ -1,40 +1,55 @@
-require 'ostruct'
 require_relative '../spec_helper'
 require_relative '../test_db'
 require_relative '../../app/models/database_project_mapper'
 
 module Plumb
-  describe DatabaseProjectMapper do
-    let(:mapper) { DatabaseProjectMapper.new }
-    let(:old_name) { SecureRandom.hex }
-    let(:new_name) { SecureRandom.hex }
-    let(:project_id) { SecureRandom.uuid }
-    let(:build_id1) { SecureRandom.uuid }
-    let(:build_id2) { SecureRandom.uuid }
+  module ProjectMapperSharedExamples
+    def test_has_project_mapper_interface
+      mapper.must_respond_to :all
+      mapper.must_respond_to :find_by_name
+      mapper.must_respond_to :get
+    end
+  end
 
-    def project_hash(attrs = {})
-      {
-        id: project_id,
-        name: new_name,
-        activity: 'Sleeping',
-        repository_url: nil,
-        ready: nil,
-        script: nil
-      }.merge(attrs)
+  module TestDatabaseProjectMapper
+    class Base < MiniTest::Unit::TestCase
+      attr_reader :mapper, :project_id, :build_id1, :build_id2
+
+      def setup
+        @mapper = DatabaseProjectMapper.new
+        @project_id = SecureRandom.uuid
+        @build_id1 = SecureRandom.uuid
+        @build_id2 = SecureRandom.uuid
+      end
+
+      def project_hash(attrs = {})
+        {
+          id: project_id,
+          name: SecureRandom.hex,
+          activity: 'Sleeping',
+          repository_url: nil,
+          ready: nil,
+          script: nil
+        }.merge(attrs)
+      end
+
+      def build_hash(attrs)
+        {
+          id: nil,
+          status: nil,
+          started_at: nil,
+          completed_at: nil,
+          project_id: project_id
+        }.merge(attrs)
+      end
     end
 
-    def build_hash(attrs)
-      {
-        id: nil,
-        status: nil,
-        started_at: nil,
-        completed_at: nil,
-        project_id: project_id
-      }.merge(attrs)
+    class Basics < Base
+      include ProjectMapperSharedExamples
     end
 
-    describe "getting a project by ID" do
-      it "includes its builds" do
+    class GettingById < Base
+      def test_includes_builds
         attributes = project_hash(
           id: project_id,
           builds: [
@@ -50,14 +65,14 @@ module Plumb
         project.builds.first.must_be_kind_of Build
       end
 
-      it "raises an exception if there is no such project" do
+      def test_raises_exception_when_not_found
         -> { mapper.get('made-up-id') }.
           must_raise DatabaseProjectMapper::ProjectNotFound
       end
     end
 
-    describe "getting a project by name" do
-      it "includes its builds" do
+    class FindingByName < Base
+      def test_includes_builds
         attributes = project_hash(
           id: project_id,
           name: "Cool Build",
@@ -71,103 +86,111 @@ module Plumb
         project.builds.first.must_be_kind_of Build
       end
 
-      it "returns nil if there is no such project" do
+      def test_returns_nil_if_not_found
         mapper.find_by_name('made-up-name').must_be :nil?
       end
     end
 
-    describe "creating a single project" do
-      it "updates the collection with the new project" do
+    class Creating < Base
+      def setup
+        super
+        @new_name = SecureRandom.hex
+      end
+
+      def test_adds_project_to_collection
         attributes = project_hash(
-          name: new_name,
+          name: @new_name,
           builds: [ build_hash(id: build_id1, status: 'Success') ]
         )
         mapper.insert(attributes)
-        stored_project = mapper.find_by_name new_name
+        stored_project = mapper.find_by_name @new_name
         stored_project.must_be_kind_of Project
         stored_project.builds.first.must_be_kind_of Build
         stored_project.to_hash.must_equal(attributes)
       end
 
-      describe "when its ID already exists" do
-        let(:attributes) { project_hash }
-
-        before do
-          mapper.insert(attributes)
+      class DuplicateIds < Base
+        def setup
+          super
+          @attributes = project_hash
+          mapper.insert(@attributes)
         end
 
-        it "doesn't create a new project" do
-          old_count = mapper.all.select {|p| p.name == new_name}.size
-          mapper.insert(attributes) rescue nil
-          mapper.all.select {|p| p.name == new_name}.size.must_equal old_count
+        def test_doesnt_add_duplicate_to_collection
+          old_count = mapper.all.select {|p| p.name == @new_name}.size
+          mapper.insert(@attributes) rescue DatabaseProjectMapper::Conflict
+          mapper.all.select {|p| p.name == @new_name}.size.must_equal old_count
         end
 
-        it "raises an exception" do
-          -> { mapper.insert(attributes) }.
+        def test_raises_exception
+          -> { mapper.insert(@attributes) }.
             must_raise DatabaseProjectMapper::Conflict
         end
       end
     end
 
-    describe "updating a single project" do
-      before do
-        mapper.all.select {|p| [old_name, new_name].include?(p.name)}.each do |project|
+    class Updating < Base
+      def setup
+        super
+        @old_name = SecureRandom.hex
+        @new_name = SecureRandom.hex
+        mapper.all.select {|p| [@old_name, @new_name].include?(p.name)}.each do |project|
           mapper.delete(project)
         end
-
-        mapper.insert(project_hash(id: project_id, name: old_name))
+        mapper.insert(project_hash(id: project_id, name: @old_name))
       end
 
-      it "updates the existing project attributes" do
-        mapper.all.map(&:name).wont_include(new_name)
-        mapper.update(project_id, name: new_name)
-        mapper.all.map(&:name).must_include(new_name)
+      def test_updates_its_attributes
+        mapper.all.map(&:name).wont_include(@new_name)
+        mapper.update(project_id, name: @new_name)
+        mapper.all.map(&:name).must_include(@new_name)
       end
 
-      it "raises an exception if the project is not found" do
+      def test_raises_exception_if_not_found
         -> { mapper.update('made-up-id', name: 'blah') }.
           must_raise DatabaseProjectMapper::ProjectNotFound
       end
 
-      it "adds a single build" do
+      def test_adds_a_single_build
         mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
-        mapper.find_by_name(old_name).builds.map(&:status).
+        mapper.find_by_name(@old_name).builds.map(&:status).
           must_equal ['Failed']
       end
 
-      it "adds multiple builds" do
+      def test_adds_multiple_builds
         mapper.update(
           project_id,
           builds: [
             {id: build_id1, status: 'Failed'},
             {id: build_id2, status: 'Success'},
-          ]
-        )
-        mapper.find_by_name(old_name).builds.map(&:status).
+        ])
+        mapper.find_by_name(@old_name).builds.map(&:status).
           must_equal %w(Failed Success)
       end
 
-      it "doesn't update the project if adding a build fails"
-
-      it "updates a single build" do
+      def test_updates_a_single_build
         mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
         mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
-        mapper.find_by_name(old_name).builds.map(&:status).
+        mapper.find_by_name(@old_name).builds.map(&:status).
           must_equal ['Success']
       end
 
-      it "updates multiple builds" do
+      def test_doesnt_update_the_project_if_adding_a_build_fails
+        skip
+      end
+
+      def test_updates_multiple_builds
         mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
         mapper.update(project_id, builds: [{id: build_id2, status: 'Failed'}])
 
         mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
         mapper.update(project_id, builds: [{id: build_id2, status: 'Success'}])
 
-        mapper.find_by_name(old_name).builds.map(&:status).
+        mapper.get(project_id).builds.map(&:status).
           must_equal %w(Success Success)
       end
 
-      it "raises an exception if a new build ID belongs to another project" do
+      def test_raises_exception_if_new_build_ID_belongs_to_other_project
         mapper.insert(
           id: SecureRandom.uuid,
           builds: [ { id: build_id1, status: 'success' } ]

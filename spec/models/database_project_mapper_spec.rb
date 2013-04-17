@@ -1,207 +1,162 @@
 require_relative '../spec_helper'
 require_relative '../test_db'
 require_relative '../../app/models/database_project_mapper'
+require_relative '../support/shared_examples/project_mapper'
 
 module Plumb
-  module ProjectMapperSharedExamples
-    def test_has_project_mapper_interface
-      mapper.must_respond_to :all
-      mapper.must_respond_to :find_by_name
-      mapper.must_respond_to :get
-    end
-  end
+  class TestDatabaseProjectMapper < MiniTest::Unit::TestCase
+    include ProjectMapperSharedTests
 
-  module TestDatabaseProjectMapper
-    class Base < MiniTest::Unit::TestCase
-      attr_reader :mapper, :project_id, :build_id1, :build_id2
-
-      def setup
-        @mapper = DatabaseProjectMapper.new
-        @project_id = SecureRandom.uuid
-        @build_id1 = SecureRandom.uuid
-        @build_id2 = SecureRandom.uuid
-      end
-
-      def project_hash(attrs = {})
-        {
-          id: project_id,
-          name: SecureRandom.hex,
-          activity: 'Sleeping',
-          repository_url: nil,
-          ready: nil,
-          script: nil
-        }.merge(attrs)
-      end
-
-      def build_hash(attrs)
-        {
-          id: nil,
-          status: nil,
-          started_at: nil,
-          completed_at: nil,
-          project_id: project_id
-        }.merge(attrs)
-      end
+    def mapper
+      @mapper ||= DatabaseProjectMapper.new
     end
 
-    class Basics < Base
-      include ProjectMapperSharedExamples
+    def test_includes_builds_when_getting_by_id
+      attributes = project_hash(
+        id: project_id,
+        builds: [
+          build_hash(id: build_id1, status: 'Success'),
+          build_hash(id: build_id2, status: 'Failure'),
+        ]
+      )
+
+      mapper.insert(attributes)
+
+      project = mapper.get(project_id)
+      assert_equal attributes, project.to_hash
+      assert_kind_of Build, project.builds.first
     end
 
-    class GettingById < Base
-      def test_includes_builds
-        attributes = project_hash(
-          id: project_id,
-          builds: [
-            build_hash(id: build_id1, status: 'Success'),
-            build_hash(id: build_id2, status: 'Failure'),
-          ]
-        )
-
-        mapper.insert(attributes)
-
-        project = mapper.get(project_id)
-        project.to_hash.must_equal(attributes)
-        project.builds.first.must_be_kind_of Build
-      end
-
-      def test_raises_exception_when_not_found
-        -> { mapper.get('made-up-id') }.
-          must_raise DatabaseProjectMapper::ProjectNotFound
-      end
+    def test_raises_exception_when_id_not_found
+      assert_raises(mapper.class::ProjectNotFound) { mapper.get('made-up-id') }
     end
 
-    class FindingByName < Base
-      def test_includes_builds
-        attributes = project_hash(
-          id: project_id,
-          name: "Cool Build",
-          builds: [ build_hash(id: build_id1, status: 'Success') ]
-        )
-
-        mapper.insert(attributes)
-
-        project = mapper.find_by_name("Cool Build")
-        project.to_hash.must_equal(attributes)
-        project.builds.first.must_be_kind_of Build
-      end
-
-      def test_returns_nil_if_not_found
-        mapper.find_by_name('made-up-name').must_be :nil?
-      end
+    def test_can_insert_with_string_keys
+      name = SecureRandom.hex
+      attributes = {
+        'id' => project_id,
+        'name' => name,
+        'activity' => 'Sleeping',
+        'repository_url' => nil,
+        'ready' => nil,
+        'script' => nil,
+        'builds' => [ build_hash(id: build_id1, status: 'Success') ]
+      }
+      mapper.insert(attributes)
+      assert_equal 1, mapper.get(project_id).builds.size
     end
 
-    class Creating < Base
-      def setup
-        super
-        @new_name = SecureRandom.hex
-      end
-
-      def test_adds_project_to_collection
-        attributes = project_hash(
-          name: @new_name,
-          builds: [ build_hash(id: build_id1, status: 'Success') ]
-        )
-        mapper.insert(attributes)
-        stored_project = mapper.find_by_name @new_name
-        stored_project.must_be_kind_of Project
-        stored_project.builds.first.must_be_kind_of Build
-        stored_project.to_hash.must_equal(attributes)
-      end
-
-      class DuplicateIds < Base
-        def setup
-          super
-          @attributes = project_hash
-          mapper.insert(@attributes)
-        end
-
-        def test_doesnt_add_duplicate_to_collection
-          old_count = mapper.all.select {|p| p.name == @new_name}.size
-          mapper.insert(@attributes) rescue DatabaseProjectMapper::Conflict
-          mapper.all.select {|p| p.name == @new_name}.size.must_equal old_count
-        end
-
-        def test_raises_exception
-          -> { mapper.insert(@attributes) }.
-            must_raise DatabaseProjectMapper::Conflict
-        end
-      end
+    def test_includes_builds_when_finding_by_name
+      name = SecureRandom.hex
+      attributes = project_hash(
+        id: project_id,
+        name: name,
+        builds: [ build_hash(id: build_id1, status: 'Success') ]
+      )
+      mapper.insert(attributes)
+      project = mapper.find_by_name(name)
+      assert_equal attributes, project.to_hash
+      assert_kind_of Build, project.builds.first
     end
 
-    class Updating < Base
-      def setup
-        super
-        @old_name = SecureRandom.hex
-        @new_name = SecureRandom.hex
-        mapper.all.select {|p| [@old_name, @new_name].include?(p.name)}.each do |project|
-          mapper.delete(project)
-        end
-        mapper.insert(project_hash(id: project_id, name: @old_name))
-      end
+    def test_returns_nil_if_name_not_found
+      mapper.find_by_name('made-up-name').must_be :nil?
+    end
 
-      def test_updates_its_attributes
-        mapper.all.map(&:name).wont_include(@new_name)
-        mapper.update(project_id, name: @new_name)
-        mapper.all.map(&:name).must_include(@new_name)
-      end
+    def test_adds_project_to_collection
+      name = SecureRandom.hex
+      attributes = project_hash(
+        name: name,
+        builds: [ build_hash(id: build_id1, status: 'Success') ]
+      )
+      mapper.insert(attributes)
+      stored_project = mapper.find_by_name name
+      assert_kind_of Project, stored_project
+      assert_kind_of Build, stored_project.builds.first
+      assert_equal attributes, stored_project.to_hash
+    end
 
-      def test_raises_exception_if_not_found
-        -> { mapper.update('made-up-id', name: 'blah') }.
-          must_raise DatabaseProjectMapper::ProjectNotFound
-      end
+    def test_doesnt_add_duplicate_to_collection
+      new_name = SecureRandom.hex
+      attributes = project_hash
+      mapper.insert(attributes)
+      old_count = mapper.all.select {|p| p.name == new_name}.size
+      mapper.insert(attributes) rescue mapper.class::Conflict
+      assert_equal old_count, mapper.all.select {|p| p.name == new_name}.size
+    end
 
-      def test_adds_a_single_build
-        mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
-        mapper.find_by_name(@old_name).builds.map(&:status).
-          must_equal ['Failed']
-      end
+    def test_raises_exception_when_duplicate_attempt_made
+      attributes = project_hash
+      mapper.insert(attributes)
+      assert_raises(mapper.class::Conflict) { mapper.insert(attributes) }
+    end
 
-      def test_adds_multiple_builds
+    def test_updates_its_attributes
+      old_name = SecureRandom.hex
+      new_name = SecureRandom.hex
+      mapper.insert(project_hash(id: project_id, name: old_name))
+      refute_includes mapper.all.map(&:name), new_name
+      mapper.update(project_id, name: new_name)
+      assert_includes mapper.all.map(&:name), new_name
+    end
+
+    def test_raises_exception_if_id_not_found
+      assert_raises(mapper.class::ProjectNotFound) { mapper.update('made-up-id', name: 'blah') }
+    end
+
+    def test_adds_a_single_build
+      name = SecureRandom.hex
+      mapper.insert(project_hash(id: project_id, name: name))
+      mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
+      assert_equal ['Failed'], mapper.find_by_name(name).builds.map(&:status)
+    end
+
+    def test_adds_multiple_builds
+      name = SecureRandom.hex
+      mapper.insert(project_hash(id: project_id, name: name))
+      mapper.update(
+        project_id,
+        builds: [
+          {id: build_id1, status: 'Failed'},
+          {id: build_id2, status: 'Success'},
+      ])
+      assert_equal %w(Failed Success), mapper.find_by_name(name).builds.map(&:status)
+    end
+
+    def test_updates_a_single_build
+      name = SecureRandom.hex
+      mapper.insert(project_hash(id: project_id, name: name))
+      mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
+      mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
+      assert_equal ['Success'], mapper.find_by_name(name).builds.map(&:status)
+    end
+
+    def test_doesnt_update_the_project_if_adding_a_build_fails
+      skip
+    end
+
+    def test_updates_multiple_builds
+      name = SecureRandom.hex
+      mapper.insert(project_hash(id: project_id, name: name))
+      mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
+      mapper.update(project_id, builds: [{id: build_id2, status: 'Failed'}])
+      mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
+      mapper.update(project_id, builds: [{id: build_id2, status: 'Success'}])
+      assert_equal %w(Success Success), mapper.get(project_id).builds.map(&:status)
+    end
+
+    def test_raises_exception_if_new_build_ID_belongs_to_other_project
+      mapper.insert project_hash(id: project_id)
+      mapper.insert(
+        id: SecureRandom.uuid,
+        builds: [ { id: build_id1, status: 'success' } ]
+      )
+      assert_raises(mapper.class::Conflict) {
         mapper.update(
           project_id,
-          builds: [
-            {id: build_id1, status: 'Failed'},
-            {id: build_id2, status: 'Success'},
-        ])
-        mapper.find_by_name(@old_name).builds.map(&:status).
-          must_equal %w(Failed Success)
-      end
-
-      def test_updates_a_single_build
-        mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
-        mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
-        mapper.find_by_name(@old_name).builds.map(&:status).
-          must_equal ['Success']
-      end
-
-      def test_doesnt_update_the_project_if_adding_a_build_fails
-        skip
-      end
-
-      def test_updates_multiple_builds
-        mapper.update(project_id, builds: [{id: build_id1, status: 'Failed'}])
-        mapper.update(project_id, builds: [{id: build_id2, status: 'Failed'}])
-
-        mapper.update(project_id, builds: [{id: build_id1, status: 'Success'}])
-        mapper.update(project_id, builds: [{id: build_id2, status: 'Success'}])
-
-        mapper.get(project_id).builds.map(&:status).
-          must_equal %w(Success Success)
-      end
-
-      def test_raises_exception_if_new_build_ID_belongs_to_other_project
-        mapper.insert(
-          id: SecureRandom.uuid,
           builds: [ { id: build_id1, status: 'success' } ]
         )
-        -> {
-          mapper.update(
-            project_id,
-            builds: [ { id: build_id1, status: 'success' } ]
-          )
-        }.must_raise DatabaseProjectMapper::Conflict
-      end
+      }
     end
   end
 end

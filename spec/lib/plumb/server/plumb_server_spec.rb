@@ -8,7 +8,7 @@ module Plumb
     describe "putting a new project" do
       it "is reflected in the CCTray XML feed" do
         id = SecureRandom.uuid
-        put_project id, name: 'PUTting a new project'
+        put_project id, name: 'PUTting a new project', builds: []
         last_response.status.must_equal 200
 
         project_xml('PUTting a new project')['lastBuildStatus'].

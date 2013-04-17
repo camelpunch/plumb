@@ -22,9 +22,11 @@ module Plumb
     end
 
     def insert(attributes)
+      id = grab attributes, :id
+      builds = grab attributes, :builds, []
       Storage::Project.create(without_builds(attributes))
-      attributes.fetch(:builds, []).each do |build_attrs|
-        Storage::Project[attributes[:id]].add_build(build_attrs)
+      builds.each do |build_attrs|
+        Storage::Project[id].add_build(build_attrs)
       end
     rescue Sequel::ConstraintViolation => e
       raise Conflict, e.message
@@ -55,6 +57,10 @@ module Plumb
 
     private
 
+    def grab(hash, key, default = nil)
+      hash.fetch(key.to_sym, hash.fetch(key.to_s, default))
+    end
+
     def hydrate(stored_project)
       return nil if stored_project.nil?
       Project.new(stored_project.to_hash).tap do |project|
@@ -65,7 +71,7 @@ module Plumb
     end
 
     def without_builds(attributes)
-      attributes.reject {|key, value| key == :builds}
+      attributes.reject {|key, value| [:builds, 'builds'].include?(key)}
     end
   end
 end

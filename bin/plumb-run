@@ -6,11 +6,14 @@ require 'json'
 require_relative '../app/models/config'
 
 config = Plumb::Config.load_file "#{Dir.getwd}/plumb.yml"
+#remote_projects = Plumb::RemoteProjectMapper.new(config)
 connection = Faraday.new(url: config.endpoint) do |faraday|
   faraday.adapter *config.adapter
 end
 
 config.projects.each do |project|
+  #remote_projects.update(project.to_param,
+                         #builds: [{id: SecureRandom.uuid, status: 'Building'}])
   build_id = SecureRandom.uuid
   connection.put(
     "/projects/#{project.to_param}/builds/#{build_id}",

@@ -21,12 +21,12 @@ describe "plumb" do
           }
         }
       )
-      run_command_in_this_thread(path, 'plumb-configure')
-      run_command_in_this_thread(path, 'plumb-run')
+      run_in_thread(path, 'plumb-configure')
+      run_in_thread(path, 'plumb-run')
       project_activity('Happy Project').must_equal 'Building'
 
       # finish build
-      get_dashboard
+      get_feed
       build_id = last_build_label_for_project('Happy Project')
       put_build 'happy_project', build_id, status: 'Success'
 
@@ -40,7 +40,7 @@ describe "plumb" do
     end
   end
 
-  def run_command_in_this_thread(working_dir, filename, *args)
+  def run_in_thread(working_dir, filename, *args)
     executable_path = File.expand_path("../../bin/#{filename}", __FILE__)
     old_working_dir = Dir.pwd
     Dir.chdir(working_dir)

@@ -6,7 +6,7 @@ module Plumb
     include ServerSpecHelpers
 
     describe "putting a new project" do
-      it "is reflected in the CCTray XML feed" do
+      it "gets reflected in the CCTray XML feed" do
         id = SecureRandom.uuid
         put_project id, name: 'PUTting a new project', builds: []
         last_response.status.must_equal 200
@@ -101,12 +101,12 @@ module Plumb
 
     describe "getting the CCTray XML feed" do
       it "uses the XML content type" do
-        get_dashboard
+        get_feed
         last_response.content_type.must_include 'text/xml'
       end
 
       it "always gives a 200" do
-        get_dashboard
+        get_feed
         last_response.status.must_equal 200
       end
 

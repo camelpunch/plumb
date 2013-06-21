@@ -9,7 +9,7 @@ module ServerSpecHelpers
     put "/projects/#{project_id}/builds/#{build_id}", json(attributes)
   end
 
-  def get_dashboard
+  def get_feed
     get '/cc.xml'
   end
 
@@ -26,7 +26,7 @@ module ServerSpecHelpers
   end
 
   def project_xml(name)
-    get_dashboard
+    get_feed
     feed.css("Projects>Project[name='#{name}']").first.tap do |project_xml|
       raise IncompleteXML, last_response.body unless project_xml
     end

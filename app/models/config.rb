@@ -4,19 +4,7 @@ require_relative '../../lib/plumb/server/plumb_server'
 
 module Plumb
   class Config
-    class Projects
-      include Enumerable
-
-      def initialize(projects)
-        @projects = projects
-      end
-
-      def each(&block)
-        @projects.each do |project|
-          block.call project
-        end
-      end
-
+    class Projects < Array
       def find_by_name(name)
         find {|project| project.name == name}
       end
